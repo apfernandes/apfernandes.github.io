@@ -5,7 +5,7 @@
 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>imageCompression</title>
+<title>ffmpeg</title>
 
 
 <style type="text/css">
@@ -330,299 +330,123 @@ kbd {
 
 <h2 id="toc_0"><a href="../index.html">Back to Randomise USR 0 home</a></h2>
 
-<h1 id="toc_1">Image compression</h1>
+<h1 id="toc_1">FFmpeg</h1>
 
-<p>TODO:// <a href="https://pngmini.com">Test imageAlpha</a></p>
+<h3 id="toc_2">Convert au to mp3</h3>
 
-<p>2017-01-28 </p>
+<div><pre><code class="language-none">    ./ffmpeg -i source.m4a output.mp3</code></pre></div>
 
-<p>These tests aim to compare the perceived quality and the image size by using different software compression applications.</p>
+<hr>
 
-<p>I have tested the following </p>
+<h3 id="toc_3">Reducing the file size - <a href="https://trac.ffmpeg.org/wiki/Encode/MP3">Addional MP3 encode info</a></h3>
 
-<ul>
-<li>JPEGmini v1.9.9 (build 119)</li>
-<li><a href="https://imageoptim.com/mac">ImageOptim v1.6.5</a></li>
-</ul>
+<p>For a file of 6.9 MByte</p>
 
-<p>Summary comparison table using an original iPhone 7+ photo (4032 x 3024)</p>
+<p>The following command </p>
+
+<div><pre><code class="language-none">    ./ffmpeg -i sourceSound.mp3 -codec:a libmp3lame -qscale:a 8  output.mp3</code></pre></div>
+
+<p>will reduce it to 3.9 MByte. Different settings yeld the following file sizes</p>
 
 <table>
 <thead>
 <tr>
-<th>File</th>
-<th>Size</th>
+<th>setting</th>
+<th>size</th>
+<th></th>
 </tr>
 </thead>
 
 <tbody>
 <tr>
-<td>Orignal Image 4032 x 3024</td>
-<td>2 097 KB</td>
-</tr>
-<tr>
-<td>JPEGmini</td>
-<td>1 365 KB</td>
-</tr>
-<tr>
-<td><em>ImageOtim - insane / lossy</em></td>
+<td>original</td>
+<td>6.9 Mb</td>
 <td></td>
 </tr>
 <tr>
-<td>ImageOptim 100% Quality</td>
-<td>1 953 KB</td>
-</tr>
-<tr>
-<td>ImageOptim 70% Quality</td>
-<td>604 KB</td>
-</tr>
-<tr>
-<td>ImageOptim 40% Quality</td>
-<td>324 KB</td>
-</tr>
-<tr>
-<td><em>ImageOtim - fast / lossy</em> (*)</td>
+<td>-qscale:a 0</td>
+<td>5 Mb</td>
 <td></td>
 </tr>
 <tr>
-<td>ImageOptim 100% Quality</td>
-<td>1 953 KB</td>
+<td>-qscale:a 1</td>
+<td>4.4 Mb</td>
+<td></td>
 </tr>
 <tr>
-<td>ImageOptim 70% Quality</td>
-<td>604 KB</td>
+<td>-qscale:a 2</td>
+<td>3.9 Mb</td>
+<td></td>
 </tr>
 <tr>
-<td>ImageOptim 40% Quality</td>
-<td>324 KB</td>
+<td>-qscale:a 3</td>
+<td>3.6 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 4</td>
+<td>3.2 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 5</td>
+<td>2.7 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 6</td>
+<td>2.3 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 7</td>
+<td>2 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 8</td>
+<td>1.8 Mb</td>
+<td>This one sounds good enough for a casual game</td>
+</tr>
+<tr>
+<td>-qscale:a 9</td>
+<td>1.5 Mb</td>
+<td>Noticeable degradation for high frequencies</td>
 </tr>
 </tbody>
 </table>
 
-<p>(*) The speed setting isn&#39;t working given that we are getting the same file sizes</p>
+<hr>
 
-<p>Summary comparison table using an iPhone 7+ photo scaled to the iPad Pro 12.9&quot; screen pixels (2732 x 2049)</p>
+<h3 id="toc_4">Reduce an image size</h3>
 
-<table>
-<thead>
-<tr>
-<th>File</th>
-<th>Size</th>
-</tr>
-</thead>
+<p>FFmpeg can be used to scale PNG.</p>
 
-<tbody>
-<tr>
-<td>Orignal Image 2732 x 2049</td>
-<td>1 058 KB</td>
-</tr>
-<tr>
-<td>JPEGmini</td>
-<td>639 KB</td>
-</tr>
-<tr>
-<td><em>ImageOtim - insane / lossy</em></td>
-<td></td>
-</tr>
-<tr>
-<td>ImageOptim 100% Quality</td>
-<td>932 KB</td>
-</tr>
-<tr>
-<td>ImageOptim 70% Quality</td>
-<td>318 KB</td>
-</tr>
-<tr>
-<td>ImageOptim 40% Quality</td>
-<td>172 KB</td>
-</tr>
-</tbody>
-</table>
+<p>As an example, the following command will generate a 512x512</p>
 
-<p>Summary comparison table using an iPhone 7+ photo scaled to the screen pixels (1440 x 1080)</p>
+<div><pre><code class="language-none">    ./ffmpeg -i icon.png -vf scale=512:512 icon512.png</code></pre></div>
 
-<table>
-<thead>
-<tr>
-<th>File</th>
-<th>Size</th>
-</tr>
-</thead>
+<p>If you want to cough up all the different icon sizes that Xcode asks for iOS create a script file
+with the content below. Provide and input file named icon.png at 1024x1024 resolution</p>
 
-<tbody>
-<tr>
-<td>Orignal Image 1440 x 1080</td>
-<td>319 KB</td>
-</tr>
-<tr>
-<td>JPEGmini</td>
-<td>181 KB</td>
-</tr>
-<tr>
-<td><em>ImageOtim - insane / lossy</em></td>
-<td></td>
-</tr>
-<tr>
-<td>ImageOptim 100% Quality</td>
-<td>297 KB</td>
-</tr>
-<tr>
-<td>ImageOptim 70% Quality</td>
-<td>100 KB</td>
-</tr>
-<tr>
-<td>ImageOptim 40% Quality</td>
-<td>46 KB</td>
-</tr>
-</tbody>
-</table>
-
-<p>Required space to store 1000 photos</p>
-
-<table>
-<thead>
-<tr>
-<th>File</th>
-<th>1 000 photos</th>
-<th>10 000 photos</th>
-<th>100 000 photos</th>
-</tr>
-</thead>
-
-<tbody>
-<tr>
-<td>Orignal Image 4032 x 3024</td>
-<td>2.1 GB</td>
-<td>20.9 GB</td>
-<td>209 GB</td>
-</tr>
-<tr>
-<td>JPEGmini</td>
-<td>1.4 GB</td>
-<td>13.7 GB</td>
-<td>137 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 100% Quality</td>
-<td>1.9 GB</td>
-<td>19.5 GB</td>
-<td>195 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 70% Quality</td>
-<td>604 MB</td>
-<td>6.04 MB</td>
-<td>60 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 40% Quality</td>
-<td>324 MB</td>
-<td>3.24 MB</td>
-<td>32 GB</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>Orignal Image 2732 x 2049</td>
-<td>1.0 GB</td>
-<td>10.6 GB</td>
-<td>100 GB</td>
-</tr>
-<tr>
-<td>JPEGmini</td>
-<td>639 MB</td>
-<td>6.39 GB</td>
-<td>63 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 100% Quality</td>
-<td>932 MB</td>
-<td>9.32 GB</td>
-<td>93 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 70% Quality</td>
-<td>318 MB</td>
-<td>3.18 GB</td>
-<td>31 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 40% Quality</td>
-<td>172 MB</td>
-<td>1.72 GB</td>
-<td>17 GB</td>
-</tr>
-<tr>
-<td></td>
-<td></td>
-<td></td>
-<td></td>
-</tr>
-<tr>
-<td>Orignal Image 1440 x 1080</td>
-<td>319 MB</td>
-<td>3.19 GB</td>
-<td>32 GB</td>
-</tr>
-<tr>
-<td>JPEGmini</td>
-<td>181 MB</td>
-<td>1.81 GB</td>
-<td>18 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 100% Quality</td>
-<td>297 MB</td>
-<td>2.97 GB</td>
-<td>29 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 70% Quality</td>
-<td>100 MB</td>
-<td>1.00 GB</td>
-<td>10 GB</td>
-</tr>
-<tr>
-<td>ImageOptim 40% Quality</td>
-<td>46 MB</td>
-<td>460 MB</td>
-<td>4.6 GB</td>
-</tr>
-</tbody>
-</table>
-
-<h2 id="toc_2">Side by side comparison</h2>
-
-<p><img src="assets/media_comparison.png" alt="Original Image"></p>
-
-<h2 id="toc_3">Individual Photos, original size</h2>
-
-<p><img src="assets/media_originalSize_IMG_0366.jpg" alt="Original Image">
-<img src="assets/media_originalSize_IMG_0366_JPEGmini.jpg" alt="JPEGmini Image">
-<img src="assets/media_originalSize_IMG_0366_imageOptim_100_insane.jpg" alt="Image Optim 100 - insane">
-<img src="assets/media_originalSize_IMG_0366_imageOptim_70_insane.jpg" alt="Image Optim 70 - insane">
-<img src="assets/media_originalSize_IMG_0366_imageOptim_40_insane.jpg" alt="Image Optim 40 - insane">
-<img src="assets/media_originalSize_IMG_0366_imageOptim_100_fast.jpg" alt="Image Optim 100 - fast">
-<img src="assets/media_originalSize_IMG_0366_imageOptim_70_fast.jpg" alt="Image Optim 70 - fast">
-<img src="assets/media_originalSize_IMG_0366_imageOptim_40_fast.jpg" alt="Image Optim 40 - fast"></p>
-
-<h2 id="toc_4">Individual Photos, iPad Pro 12.9&quot; size</h2>
-
-<p><img src="assets/media_iPadProSize_IMG_0366.jpg" alt="Original Image">
-<img src="assets/media_iPadProSize_IMG_0366_JPEGmini.jpg" alt="JPEGmini Image">
-<img src="assets/media_iPadProSize_IMG_0366_imageOptim_100_insane.jpg" alt="Image Optim 100 - insane">
-<img src="assets/media_iPadProSize_IMG_0366_imageOptim_70_insane.jpg" alt="Image Optim 70 - insane">
-<img src="assets/media_iPadProSize_IMG_0366_imageOptim_40_insane.jpg" alt="Image Optim 40 - insane"></p>
-
-<h2 id="toc_5">Individual Photos, iPhone7 Plus Sizes</h2>
-
-<p><img src="assets/media_iPhone7PlusSize_IMG_0366_imageOptim_100_insane.jpg" alt="Image Optim 100 - insane">
-<img src="assets/media_iPhone7PlusSize_IMG_0366_imageOptim_70_insane.jpg" alt="Image Optim 70 - insane">
-<img src="assets/media_iPhone7PlusSize_IMG_0366_imageOptim_40_insane.jpg" alt="Image Optim 40 - insane"></p>
+<div><pre><code class="language-none">    ./ffmpeg -i icon.png -vf scale=512:512 icon512.png
+    ./ffmpeg -i icon.png -vf scale=40:40 icon40_iPhone_Notification_iOS_7_10_2x_40px.png
+    ./ffmpeg -i icon.png -vf scale=60:60 icon60_iPhone_Notification_iOS_7_10_3x_60px.png
+    ./ffmpeg -i icon.png -vf scale=58:58 icon58_iPhone_Spotlight_iOS_5-6_2x_58px.png
+    ./ffmpeg -i icon.png -vf scale=87:87 icon87_iPhone_Spotlight_iOS_5-6_3x_87px.png
+    ./ffmpeg -i icon.png -vf scale=80:80 icon80_iPhone_Spotlight_iOS_7-10_2x_80px.png
+    ./ffmpeg -i icon.png -vf scale=120:120 icon120_iPhone_Spotlight_iOS_7-10_3x_120px.png
+    ./ffmpeg -i icon.png -vf scale=120:120 icon120_iPhone_APP_iOS_7-10_2x_120px.png
+    ./ffmpeg -i icon.png -vf scale=180:180 icon180_iPhone_APP_iOS_7-10_3x_180px.png
+    ./ffmpeg -i icon.png -vf scale=20:20 icon_iPad_notifications_iOS_7-10_2x_20px.png
+    ./ffmpeg -i icon.png -vf scale=40:40 icon_iPad_notifications_iOS_7-10_3x_40px.png
+    ./ffmpeg -i icon.png -vf scale=29:29 icon_iPad_settings_iOS_5-10_1x_29px.png
+    ./ffmpeg -i icon.png -vf scale=58:58 icon_iPad_settings_iOS_5-10_2x_58px.png
+    ./ffmpeg -i icon.png -vf scale=40:40 icon_iPad_spotlight_iOS_7-10_1x_40px.png
+    ./ffmpeg -i icon.png -vf scale=80:80 icon_iPad_spotlight_iOS_7-10_2x_80px.png
+    ./ffmpeg -i icon.png -vf scale=76:76 icon_iPad_APP_iOS_7-10_1x_76px.png
+    ./ffmpeg -i icon.png -vf scale=152:152 icon_iPad_APP_iOS_7-10_2x_152px.png
+    ./ffmpeg -i icon.png -vf scale=167:167 icon_iPadPro_APP_iOS_9-10_2x_167px.png</code></pre></div>
 
 
 
