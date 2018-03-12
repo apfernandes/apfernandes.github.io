@@ -22,7 +22,7 @@ function initialize() {
     checkDevice();
 
     drawing = new Image();
-    drawing.src = 'world_map.png'; 
+    drawing.src = 'world_map.PNG'; 
 
     drawing.onload = function() {
 
