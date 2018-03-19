@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui">
+    <title>[Back to Randomise USR 0 home](../index.html)</title>
+    <link type="text/css" rel="stylesheet" href="../assets/css/github-markdown.css">
+    <link type="text/css" rel="stylesheet" href="../assets/css/pilcrow.css">
+    <link type="text/css" rel="stylesheet" href="../assets/css/hljs-github.min.css"/>
+  </head>
+  <body>
+    <article class="markdown-body"><h2 id="[back-to-randomise-usr-0-home](../index.html)"><a class="header-link" href="#[back-to-randomise-usr-0-home](../index.html)"></a><a href="../index.html">Back to Randomise USR 0 home</a></h2>
+<h1 id="calculate-the-overlap-area-of-two-rectangles"><a class="header-link" href="#calculate-the-overlap-area-of-two-rectangles"></a>Calculate the overlap area of two rectangles</h1>
+<p>2018-03-19</p>
+<p>Calculating the overlap area of two rectangles is straightforward but interesting geometry problem.</p>
+<p>I took a different approach by using a Monte Carlo simulation to calculate the overlap area.</p>
+<p>Basically, select a rectangle that includes the two rectangles (our big rectangle). Throw a number of random points in that rectangle and count how many fall inside the two rectangles. Multiply the percentage of points that fall in the two rectangles by the area of the &#39;big&#39; rectangle, and you have a good approximation of the real overlap area.</p>
+<p>The higher the number of points you throw, the closest you will get to the correct area.</p>
+<p><a href="http://apedrofernandes.eu/overlap_cassido/overlap_cassido.html">Check the animated ovelap calculations here.</a></p>
+<p>It will generate random rectangles in my favorite graphing paper and then iterate through a different number of points thrown to calculate the overlap area. It loops forever providing infinite Mondrian pictures.</p>
+<p class="img-container"><img src="overlap_sample.png" alt="Sample Overlap"></p>
+    </article>
+  </body>
+</html>

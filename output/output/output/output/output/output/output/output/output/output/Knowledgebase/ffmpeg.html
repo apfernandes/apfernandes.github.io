@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimal-ui">
+    <title>[Back to Randomise USR 0 home](../index.html)</title>
+    <link type="text/css" rel="stylesheet" href="../assets/css/github-markdown.css">
+    <link type="text/css" rel="stylesheet" href="../assets/css/pilcrow.css">
+    <link type="text/css" rel="stylesheet" href="../assets/css/hljs-github.min.css"/>
+  </head>
+  <body>
+    <article class="markdown-body"><h2 id="[back-to-randomise-usr-0-home](../index.html)"><a class="header-link" href="#[back-to-randomise-usr-0-home](../index.html)"></a><a href="../index.html">Back to Randomise USR 0 home</a></h2>
+<h1 id="ffmpeg"><a class="header-link" href="#ffmpeg"></a>FFmpeg</h1>
+<h3 id="convert-au-to-mp3"><a class="header-link" href="#convert-au-to-mp3"></a>Convert au to mp3</h3>
+<pre class="hljs"><code>    ./ffmpeg -<span class="hljs-selector-tag">i</span> source<span class="hljs-selector-class">.m4a</span> output.mp3</code></pre><hr>
+<h3 id="reducing-the-file-size---[addional-mp3-encode-info](https://trac.ffmpeg.org/wiki/encode/mp3)"><a class="header-link" href="#reducing-the-file-size---[addional-mp3-encode-info](https://trac.ffmpeg.org/wiki/encode/mp3)"></a>Reducing the file size - <a href="https://trac.ffmpeg.org/wiki/Encode/MP3">Addional MP3 encode info</a></h3>
+<p>For a file of 6.9 Mbyte</p>
+<p>The following command </p>
+<pre class="hljs"><code>    ./ffmpeg -<span class="hljs-selector-tag">i</span> sourceSound<span class="hljs-selector-class">.mp3</span> -codec:<span class="hljs-selector-tag">a</span> libmp3lame -qscale:<span class="hljs-selector-tag">a</span> <span class="hljs-number">8</span>  output.mp3</code></pre><p>will reduce it to 3.9 Mbyte. Different settings yield the following file sizes</p>
+<table>
+<thead>
+<tr>
+<th>setting</th>
+<th>size</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>original</td>
+<td>6.9 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 0</td>
+<td>5 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 1</td>
+<td>4.4 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 2</td>
+<td>3.9 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 3</td>
+<td>3.6 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 4</td>
+<td>3.2 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 5</td>
+<td>2.7 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 6</td>
+<td>2.3 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 7</td>
+<td>2 Mb</td>
+<td></td>
+</tr>
+<tr>
+<td>-qscale:a 8</td>
+<td>1.8 Mb</td>
+<td>This one sounds good enough for a casual game</td>
+</tr>
+<tr>
+<td>-qscale:a 9</td>
+<td>1.5 Mb</td>
+<td>Noticeable degradation for high frequencies</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h3 id="reduce-an-image-size"><a class="header-link" href="#reduce-an-image-size"></a>Reduce an image size</h3>
+<p>FFmpeg can be used to scale PNG.</p>
+<p>As an example, the following command will generate a 512x512</p>
+<pre class="hljs"><code>    ./ffmpeg -i icon.png -vf scale=<span class="hljs-number">512:512</span> icon512.png</code></pre><p>If you want to cough up all the different icon sizes that Xcode asks for iOS create a script file
+with the content below. Provide and input file named icon.png at 1024x1024 resolution</p>
+<pre class="hljs"><code>    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">512</span>:<span class="hljs-number">512</span> icon512.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">40</span>:<span class="hljs-number">40</span> icon40_iPhone_Notification_iOS_7_10_2x_40px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">60</span>:<span class="hljs-number">60</span> icon60_iPhone_Notification_iOS_7_10_3x_60px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">58</span>:<span class="hljs-number">58</span> icon58_iPhone_Spotlight_iOS_5-_2x_58px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">87</span>:<span class="hljs-number">87</span> icon87_iPhone_Spotlight_iOS_5-_3x_87px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">80</span>:<span class="hljs-number">80</span> icon80_iPhone_Spotlight_iOS_7-0_2x_80px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">120</span>:<span class="hljs-number">120</span> icon120_iPhone_Spotlight_iOS_7-0_3x_120px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">120</span>:<span class="hljs-number">120</span> icon120_iPhone_APP_iOS_7-0_2x_120px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">180</span>:<span class="hljs-number">180</span> icon180_iPhone_APP_iOS_7-0_3x_180px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">20</span>:<span class="hljs-number">20</span> icon_iPad_notifications_iOS_7-0_2x_20px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">40</span>:<span class="hljs-number">40</span> icon_iPad_notifications_iOS_7-0_3x_40px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">29</span>:<span class="hljs-number">29</span> icon_iPad_settings_iOS_5-0_1x_29px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">58</span>:<span class="hljs-number">58</span> icon_iPad_settings_iOS_5-0_2x_58px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">40</span>:<span class="hljs-number">40</span> icon_iPad_spotlight_iOS_7-0_1x_40px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">80</span>:<span class="hljs-number">80</span> icon_iPad_spotlight_iOS_7-0_2x_80px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">76</span>:<span class="hljs-number">76</span> icon_iPad_APP_iOS_7-0_1x_76px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">152</span>:<span class="hljs-number">152</span> icon_iPad_APP_iOS_7-0_2x_152px.png
+    ./ffmpeg -i icon.png -vf <span class="hljs-built_in">scale</span>=<span class="hljs-number">167</span>:<span class="hljs-number">167</span> icon_iPadPro_APP_iOS_9-0_2x_167px.png</code></pre>    </article>
+  </body>
+</html>
