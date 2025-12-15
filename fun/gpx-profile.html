@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPX Altitude Profile Analyzer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-weight: 300;
+            font-size: 2.5rem;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .upload-zone {
+            border: 2px dashed #4a5568;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.03);
+            cursor: pointer;
+        }
+
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-zone input {
+            display: none;
+        }
+
+        .upload-zone label {
+            cursor: pointer;
+            display: block;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: #a0aec0;
+        }
+
+        .upload-text span {
+            color: #667eea;
+            text-decoration: underline;
+        }
+
+        .files-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: center;
+        }
+
+        .file-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-tag .remove {
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .file-tag .remove:hover {
+            opacity: 1;
+        }
+
+        .chart-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .chart-wrapper {
+            position: relative;
+            height: 400px;
+        }
+
+        .instructions {
+            text-align: center;
+            padding: 20px;
+            color: #a0aec0;
+            font-size: 0.95rem;
+        }
+
+        .selection-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .info-card h3 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #a0aec0;
+            margin-bottom: 10px;
+        }
+
+        .info-card .value {
+            font-size: 2rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .info-card .unit {
+            font-size: 0.9rem;
+            color: #a0aec0;
+        }
+
+        .grade-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        .grade-flat { background: #48bb78; color: #fff; }
+        .grade-moderate { background: #ecc94b; color: #1a1a2e; }
+        .grade-steep { background: #ed8936; color: #fff; }
+        .grade-extreme { background: #f56565; color: #fff; }
+
+        .clear-btn {
+            display: block;
+            margin: 20px auto 0;
+            padding: 12px 30px;
+            background: transparent;
+            border: 2px solid #667eea;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .clear-btn:hover {
+            background: #667eea;
+            color: #fff;
+        }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 60px 20px;
+            color: #718096;
+        }
+
+        .no-data svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏔️ GPX Altitude Profile Analyzer</h1>
+
+        <div class="upload-zone" id="dropZone">
+            <input type="file" id="fileInput" multiple accept=".gpx">
+            <label for="fileInput">
+                <div class="upload-icon">📁</div>
+                <div class="upload-text">
+                    Drag & drop GPX files here or <span>browse</span>
+                </div>
+            </label>
+            <div class="files-list" id="filesList"></div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-wrapper">
+                <canvas id="altitudeChart"></canvas>
+            </div>
+            <div class="instructions" id="instructions">
+                Upload GPX files to see the altitude profile. Click on the chart to select two points and calculate the grade between them.
+            </div>
+            <div class="legend" id="legend"></div>
+        </div>
+
+        <div class="selection-info" id="selectionInfo" style="display: none;">
+            <div class="info-card">
+                <h3>Point 1</h3>
+                <div class="value" id="point1Dist">-</div>
+                <div class="unit">km</div>
+                <div style="margin-top: 5px;">
+                    <span id="point1Alt">-</span> <span class="unit">m elevation</span>
+                </div>
+            </div>
+            <div class="info-card">
+                <h3>Point 2</h3>
+                <div class="value" id="point2Dist">-</div>
+                <div class="unit">km</div>
+                <div style="margin-top: 5px;">
+                    <span id="point2Alt">-</span> <span class="unit">m elevation</span>
+                </div>
+            </div>
+            <div class="info-card">
+                <h3>Distance Between</h3>
+                <div class="value" id="distanceBetween">-</div>
+                <div class="unit">km</div>
+            </div>
+            <div class="info-card">
+                <h3>Elevation Change</h3>
+                <div class="value" id="elevationChange">-</div>
+                <div class="unit">m</div>
+            </div>
+            <div class="info-card">
+                <h3>Average Grade</h3>
+                <div class="value" id="averageGrade">-</div>
+                <div class="unit">%</div>
+                <div class="grade-indicator" id="gradeIndicator"></div>
+            </div>
+        </div>
+
+        <button class="clear-btn" id="clearSelection" style="display: none;">Clear Selection</button>
+    </div>
+
+    <script>
+        const colors = [
+            '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a',
+            '#fee140', '#30cfd0', '#a8edea', '#ff9a9e', '#fbc2eb'
+        ];
+
+        let chart = null;
+        let gpxData = [];
+        let selectedPoints = [];
+        let allDataPoints = [];
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const filesList = document.getElementById('filesList');
+        const instructions = document.getElementById('instructions');
+        const legend = document.getElementById('legend');
+        const selectionInfo = document.getElementById('selectionInfo');
+        const clearBtn = document.getElementById('clearSelection');
+
+        // Drag and drop handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'));
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'));
+        });
+
+        dropZone.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+
+        function handleDrop(e) {
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.name.endsWith('.gpx')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        parseGPX(e.target.result, file.name);
+                    };
+                    reader.readAsText(file);
+                }
+            });
+        }
+
+        function parseGPX(content, filename) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(content, 'text/xml');
+            
+            const trackPoints = xmlDoc.querySelectorAll('trkpt');
+            if (trackPoints.length === 0) return;
+
+            const points = [];
+            let totalDistance = 0;
+            let prevLat = null, prevLon = null;
+
+            trackPoints.forEach((pt, index) => {
+                const lat = parseFloat(pt.getAttribute('lat'));
+                const lon = parseFloat(pt.getAttribute('lon'));
+                const eleNode = pt.querySelector('ele');
+                const ele = eleNode ? parseFloat(eleNode.textContent) : 0;
+
+                if (prevLat !== null) {
+                    totalDistance += haversineDistance(prevLat, prevLon, lat, lon);
+                }
+
+                points.push({
+                    distance: totalDistance,
+                    elevation: ele,
+                    lat: lat,
+                    lon: lon
+                });
+
+                prevLat = lat;
+                prevLon = lon;
+            });
+
+            gpxData.push({
+                name: filename.replace('.gpx', ''),
+                points: points,
+                color: colors[gpxData.length % colors.length]
+            });
+
+            updateFilesList();
+            updateChart();
+        }
+
+        function haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function toRad(deg) {
+            return deg * Math.PI / 180;
+        }
+
+        function updateFilesList() {
+            filesList.innerHTML = gpxData.map((data, index) => `
+                <div class="file-tag" style="background: linear-gradient(135deg, ${data.color} 0%, ${data.color}99 100%);">
+                    ${data.name}
+                    <span class="remove" onclick="removeFile(${index})">✕</span>
+                </div>
+            `).join('');
+        }
+
+        function removeFile(index) {
+            gpxData.splice(index, 1);
+            // Reassign colors
+            gpxData.forEach((data, i) => {
+                data.color = colors[i % colors.length];
+            });
+            updateFilesList();
+            updateChart();
+            clearSelection();
+        }
+
+        function updateChart() {
+            if (gpxData.length === 0) {
+                if (chart) {
+                    chart.destroy();
+                    chart = null;
+                }
+                instructions.textContent = 'Upload GPX files to see the altitude profile. Click on the chart to select two points and calculate the grade between them.';
+                legend.innerHTML = '';
+                allDataPoints = [];
+                return;
+            }
+
+            instructions.textContent = 'Click on the chart to select two points and calculate the average grade between them.';
+
+            // Build combined data points for click detection
+            allDataPoints = [];
+            gpxData.forEach((track, trackIndex) => {
+                track.points.forEach((pt, ptIndex) => {
+                    allDataPoints.push({
+                        x: pt.distance,
+                        y: pt.elevation,
+                        trackIndex: trackIndex,
+                        pointIndex: ptIndex,
+                        trackName: track.name
+                    });
+                });
+            });
+
+            const datasets = gpxData.map((track, index) => ({
+                label: track.name,
+                data: track.points.map(p => ({ x: p.distance, y: p.elevation })),
+                borderColor: track.color,
+                backgroundColor: track.color + '20',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 0,
+                pointHoverRadius: 6,
+                borderWidth: 2
+            }));
+
+            const ctx = document.getElementById('altitudeChart').getContext('2d');
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    },
+                    onClick: handleChartClick,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'Distance (km)',
+                                color: '#a0aec0'
+                            },
+                            ticks: { color: '#a0aec0' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Elevation (m)',
+                                color: '#a0aec0'
+                            },
+                            ticks: { color: '#a0aec0' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#a0aec0',
+                            borderColor: '#667eea',
+                            borderWidth: 1,
+                            callbacks: {
+                                title: (items) => items[0]?.dataset.label || '',
+                                label: (item) => `Distance: ${item.parsed.x.toFixed(2)} km | Elevation: ${item.parsed.y.toFixed(0)} m`
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Update legend
+            legend.innerHTML = gpxData.map(track => `
+                <div class="legend-item">
+                    <div class="legend-color" style="background: ${track.color}"></div>
+                    ${track.name}
+                </div>
+            `).join('');
+        }
+
+        function handleChartClick(event, elements) {
+            if (!elements || elements.length === 0) return;
+
+            const element = elements[0];
+            const datasetIndex = element.datasetIndex;
+            const pointIndex = element.index;
+            const dataset = chart.data.datasets[datasetIndex];
+            const point = dataset.data[pointIndex];
+
+            const selectedPoint = {
+                distance: point.x,
+                elevation: point.y,
+                trackName: dataset.label,
+                datasetIndex: datasetIndex,
+                pointIndex: pointIndex
+            };
+
+            if (selectedPoints.length >= 2) {
+                selectedPoints = [selectedPoint];
+            } else {
+                selectedPoints.push(selectedPoint);
+            }
+
+            updateSelectionDisplay();
+            updateChartAnnotations();
+        }
+
+        function updateSelectionDisplay() {
+            if (selectedPoints.length === 0) {
+                selectionInfo.style.display = 'none';
+                clearBtn.style.display = 'none';
+                return;
+            }
+
+            selectionInfo.style.display = 'grid';
+            clearBtn.style.display = 'block';
+
+            const p1 = selectedPoints[0];
+            document.getElementById('point1Dist').textContent = p1.distance.toFixed(2);
+            document.getElementById('point1Alt').textContent = p1.elevation.toFixed(0);
+
+            if (selectedPoints.length === 2) {
+                const p2 = selectedPoints[1];
+                document.getElementById('point2Dist').textContent = p2.distance.toFixed(2);
+                document.getElementById('point2Alt').textContent = p2.elevation.toFixed(0);
+
+                const distBetween = Math.abs(p2.distance - p1.distance);
+                const elevChange = p2.elevation - p1.elevation;
+                const grade = distBetween > 0 ? (elevChange / (distBetween * 1000)) * 100 : 0;
+
+                document.getElementById('distanceBetween').textContent = distBetween.toFixed(2);
+                document.getElementById('elevationChange').textContent = (elevChange >= 0 ? '+' : '') + elevChange.toFixed(0);
+                document.getElementById('averageGrade').textContent = (grade >= 0 ? '+' : '') + grade.toFixed(1);
+
+                const gradeIndicator = document.getElementById('gradeIndicator');
+                const absGrade = Math.abs(grade);
+                if (absGrade < 3) {
+                    gradeIndicator.className = 'grade-indicator grade-flat';
+                    gradeIndicator.textContent = 'Flat';
+                } else if (absGrade < 6) {
+                    gradeIndicator.className = 'grade-indicator grade-moderate';
+                    gradeIndicator.textContent = 'Moderate';
+                } else if (absGrade < 10) {
+                    gradeIndicator.className = 'grade-indicator grade-steep';
+                    gradeIndicator.textContent = 'Steep';
+                } else {
+                    gradeIndicator.className = 'grade-indicator grade-extreme';
+                    gradeIndicator.textContent = 'Extreme';
+                }
+            } else {
+                document.getElementById('point2Dist').textContent = '-';
+                document.getElementById('point2Alt').textContent = '-';
+                document.getElementById('distanceBetween').textContent = '-';
+                document.getElementById('elevationChange').textContent = '-';
+                document.getElementById('averageGrade').textContent = '-';
+                document.getElementById('gradeIndicator').className = 'grade-indicator';
+                document.getElementById('gradeIndicator').textContent = '';
+            }
+        }
+
+        function updateChartAnnotations() {
+            if (!chart) return;
+
+            // Update point radius to show selected points
+            chart.data.datasets.forEach((dataset, di) => {
+                const pointRadii = dataset.data.map((_, pi) => {
+                    const isSelected = selectedPoints.some(sp => 
+                        sp.datasetIndex === di && sp.pointIndex === pi
+                    );
+                    return isSelected ? 8 : 0;
+                });
+                dataset.pointRadius = pointRadii;
+                dataset.pointBackgroundColor = selectedPoints.some(sp => sp.datasetIndex === di) ? '#fff' : dataset.borderColor;
+            });
+
+            chart.update();
+        }
+
+        function clearSelection() {
+            selectedPoints = [];
+            updateSelectionDisplay();
+            if (chart) {
+                chart.data.datasets.forEach(dataset => {
+                    dataset.pointRadius = 0;
+                });
+                chart.update();
+            }
+        }
+
+        clearBtn.addEventListener('click', clearSelection);
+    </script>
+</body>
+</html>
