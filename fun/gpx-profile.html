@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GPX Altitude Profile Analyzer</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -21,7 +23,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
@@ -102,17 +104,46 @@
             opacity: 1;
         }
 
-        .chart-container {
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1000px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chart-container, .map-container {
             background: rgba(255,255,255,0.05);
             border-radius: 16px;
-            padding: 30px;
-            margin-bottom: 30px;
+            padding: 20px;
             position: relative;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #a0aec0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .chart-wrapper {
             position: relative;
-            height: 400px;
+            height: 350px;
+        }
+
+        #map {
+            height: 350px;
+            border-radius: 12px;
+            z-index: 1;
         }
 
         .instructions {
@@ -124,8 +155,8 @@
 
         .selection-info {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
             margin-top: 20px;
         }
 
@@ -137,15 +168,15 @@
         }
 
         .info-card h3 {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: #a0aec0;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .info-card .value {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 600;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             -webkit-background-clip: text;
@@ -154,8 +185,14 @@
         }
 
         .info-card .unit {
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        .info-card .sub-value {
             font-size: 0.9rem;
             color: #a0aec0;
+            margin-top: 4px;
         }
 
         .grade-indicator {
@@ -192,7 +229,7 @@
         .legend {
             display: flex;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 12px;
             justify-content: center;
             margin-top: 15px;
         }
@@ -217,11 +254,55 @@
             color: #718096;
         }
 
-        .no-data svg {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 20px;
+        .map-placeholder {
+            height: 350px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            color: #718096;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .map-placeholder svg {
+            width: 60px;
+            height: 60px;
             opacity: 0.5;
+        }
+
+        /* Custom Leaflet styles */
+        .leaflet-container {
+            background: #1a1a2e;
+        }
+
+        .custom-marker {
+            background: #667eea;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .start-marker {
+            background: #48bb78;
+        }
+
+        .end-marker {
+            background: #f56565;
+        }
+
+        .selected-marker {
+            background: #ffd700;
+            border: 3px solid #fff;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        .hover-marker {
+            background: #fff;
+            border: 2px solid #667eea;
+            border-radius: 50%;
         }
     </style>
 </head>
@@ -240,14 +321,30 @@
             <div class="files-list" id="filesList"></div>
         </div>
 
-        <div class="chart-container">
-            <div class="chart-wrapper">
-                <canvas id="altitudeChart"></canvas>
+        <div class="main-content">
+            <div class="chart-container">
+                <div class="section-title">📈 Elevation Profile</div>
+                <div class="chart-wrapper">
+                    <canvas id="altitudeChart"></canvas>
+                </div>
+                <div class="instructions" id="instructions">
+                    Upload GPX files to see the altitude profile.
+                </div>
+                <div class="legend" id="legend"></div>
             </div>
-            <div class="instructions" id="instructions">
-                Upload GPX files to see the altitude profile. Click on the chart to select two points and calculate the grade between them.
+
+            <div class="map-container">
+                <div class="section-title">🗺️ Route Map</div>
+                <div id="mapWrapper">
+                    <div class="map-placeholder" id="mapPlaceholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l5.447 2.724A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                        </svg>
+                        <span>Map will appear here</span>
+                    </div>
+                    <div id="map" style="display: none;"></div>
+                </div>
             </div>
-            <div class="legend" id="legend"></div>
         </div>
 
         <div class="selection-info" id="selectionInfo" style="display: none;">
@@ -255,20 +352,16 @@
                 <h3>Point 1</h3>
                 <div class="value" id="point1Dist">-</div>
                 <div class="unit">km</div>
-                <div style="margin-top: 5px;">
-                    <span id="point1Alt">-</span> <span class="unit">m elevation</span>
-                </div>
+                <div class="sub-value"><span id="point1Alt">-</span> m elevation</div>
             </div>
             <div class="info-card">
                 <h3>Point 2</h3>
                 <div class="value" id="point2Dist">-</div>
                 <div class="unit">km</div>
-                <div style="margin-top: 5px;">
-                    <span id="point2Alt">-</span> <span class="unit">m elevation</span>
-                </div>
+                <div class="sub-value"><span id="point2Alt">-</span> m elevation</div>
             </div>
             <div class="info-card">
-                <h3>Distance Between</h3>
+                <h3>Distance</h3>
                 <div class="value" id="distanceBetween">-</div>
                 <div class="unit">km</div>
             </div>
@@ -295,9 +388,13 @@
         ];
 
         let chart = null;
+        let map = null;
         let gpxData = [];
         let selectedPoints = [];
-        let allDataPoints = [];
+        let mapLayers = [];
+        let selectedMarkers = [];
+        let hoverMarker = null;
+        let highlightedSegment = null;
 
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -306,6 +403,8 @@
         const legend = document.getElementById('legend');
         const selectionInfo = document.getElementById('selectionInfo');
         const clearBtn = document.getElementById('clearSelection');
+        const mapPlaceholder = document.getElementById('mapPlaceholder');
+        const mapDiv = document.getElementById('map');
 
         // Drag and drop handlers
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -390,6 +489,7 @@
 
             updateFilesList();
             updateChart();
+            updateMap();
         }
 
         function haversineDistance(lat1, lon1, lat2, lon2) {
@@ -418,13 +518,88 @@
 
         function removeFile(index) {
             gpxData.splice(index, 1);
-            // Reassign colors
             gpxData.forEach((data, i) => {
                 data.color = colors[i % colors.length];
             });
             updateFilesList();
             updateChart();
+            updateMap();
             clearSelection();
+        }
+
+        function initMap() {
+            if (map) return;
+            
+            mapPlaceholder.style.display = 'none';
+            mapDiv.style.display = 'block';
+            
+            map = L.map('map', {
+                zoomControl: true,
+                attributionControl: true
+            }).setView([0, 0], 2);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+        }
+
+        function updateMap() {
+            if (gpxData.length === 0) {
+                if (map) {
+                    mapDiv.style.display = 'none';
+                    mapPlaceholder.style.display = 'flex';
+                }
+                return;
+            }
+
+            initMap();
+
+            // Clear existing layers
+            mapLayers.forEach(layer => map.removeLayer(layer));
+            mapLayers = [];
+
+            const allBounds = [];
+
+            gpxData.forEach((track, trackIndex) => {
+                const coordinates = track.points.map(p => [p.lat, p.lon]);
+                
+                // Add track polyline
+                const polyline = L.polyline(coordinates, {
+                    color: track.color,
+                    weight: 4,
+                    opacity: 0.8
+                }).addTo(map);
+                mapLayers.push(polyline);
+
+                // Add start marker
+                const startIcon = L.divIcon({
+                    className: 'custom-marker start-marker',
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                });
+                const startMarker = L.marker(coordinates[0], { icon: startIcon })
+                    .bindPopup(`<b>${track.name}</b><br>Start`)
+                    .addTo(map);
+                mapLayers.push(startMarker);
+
+                // Add end marker
+                const endIcon = L.divIcon({
+                    className: 'custom-marker end-marker',
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7]
+                });
+                const endMarker = L.marker(coordinates[coordinates.length - 1], { icon: endIcon })
+                    .bindPopup(`<b>${track.name}</b><br>End<br>${track.points[track.points.length-1].distance.toFixed(2)} km`)
+                    .addTo(map);
+                mapLayers.push(endMarker);
+
+                allBounds.push(...coordinates);
+            });
+
+            if (allBounds.length > 0) {
+                map.fitBounds(allBounds, { padding: [30, 30] });
+            }
         }
 
         function updateChart() {
@@ -433,27 +608,12 @@
                     chart.destroy();
                     chart = null;
                 }
-                instructions.textContent = 'Upload GPX files to see the altitude profile. Click on the chart to select two points and calculate the grade between them.';
+                instructions.textContent = 'Upload GPX files to see the altitude profile.';
                 legend.innerHTML = '';
-                allDataPoints = [];
                 return;
             }
 
             instructions.textContent = 'Click on the chart to select two points and calculate the average grade between them.';
-
-            // Build combined data points for click detection
-            allDataPoints = [];
-            gpxData.forEach((track, trackIndex) => {
-                track.points.forEach((pt, ptIndex) => {
-                    allDataPoints.push({
-                        x: pt.distance,
-                        y: pt.elevation,
-                        trackIndex: trackIndex,
-                        pointIndex: ptIndex,
-                        trackName: track.name
-                    });
-                });
-            });
 
             const datasets = gpxData.map((track, index) => ({
                 label: track.name,
@@ -464,7 +624,8 @@
                 tension: 0.3,
                 pointRadius: 0,
                 pointHoverRadius: 6,
-                borderWidth: 2
+                borderWidth: 2,
+                trackIndex: index
             }));
 
             const ctx = document.getElementById('altitudeChart').getContext('2d');
@@ -485,6 +646,7 @@
                         intersect: false
                     },
                     onClick: handleChartClick,
+                    onHover: handleChartHover,
                     scales: {
                         x: {
                             type: 'linear',
@@ -534,6 +696,32 @@
             `).join('');
         }
 
+        function handleChartHover(event, elements) {
+            if (!map || gpxData.length === 0) return;
+
+            // Remove previous hover marker
+            if (hoverMarker) {
+                map.removeLayer(hoverMarker);
+                hoverMarker = null;
+            }
+
+            if (elements && elements.length > 0) {
+                const element = elements[0];
+                const datasetIndex = element.datasetIndex;
+                const pointIndex = element.index;
+                const track = gpxData[datasetIndex];
+                const point = track.points[pointIndex];
+
+                const hoverIcon = L.divIcon({
+                    className: 'hover-marker',
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6]
+                });
+
+                hoverMarker = L.marker([point.lat, point.lon], { icon: hoverIcon }).addTo(map);
+            }
+        }
+
         function handleChartClick(event, elements) {
             if (!elements || elements.length === 0) return;
 
@@ -542,10 +730,14 @@
             const pointIndex = element.index;
             const dataset = chart.data.datasets[datasetIndex];
             const point = dataset.data[pointIndex];
+            const track = gpxData[datasetIndex];
+            const trackPoint = track.points[pointIndex];
 
             const selectedPoint = {
                 distance: point.x,
                 elevation: point.y,
+                lat: trackPoint.lat,
+                lon: trackPoint.lon,
                 trackName: dataset.label,
                 datasetIndex: datasetIndex,
                 pointIndex: pointIndex
@@ -559,6 +751,55 @@
 
             updateSelectionDisplay();
             updateChartAnnotations();
+            updateMapSelection();
+        }
+
+        function updateMapSelection() {
+            if (!map) return;
+
+            // Remove previous selection markers
+            selectedMarkers.forEach(m => map.removeLayer(m));
+            selectedMarkers = [];
+
+            if (highlightedSegment) {
+                map.removeLayer(highlightedSegment);
+                highlightedSegment = null;
+            }
+
+            selectedPoints.forEach((point, index) => {
+                const icon = L.divIcon({
+                    className: 'selected-marker',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+
+                const marker = L.marker([point.lat, point.lon], { icon: icon })
+                    .bindPopup(`<b>Point ${index + 1}</b><br>Distance: ${point.distance.toFixed(2)} km<br>Elevation: ${point.elevation.toFixed(0)} m`)
+                    .addTo(map);
+                selectedMarkers.push(marker);
+            });
+
+            // Draw highlighted segment between two points
+            if (selectedPoints.length === 2) {
+                const p1 = selectedPoints[0];
+                const p2 = selectedPoints[1];
+                
+                // Get all points between the two selected points
+                const track = gpxData[p1.datasetIndex];
+                if (p1.datasetIndex === p2.datasetIndex) {
+                    const startIdx = Math.min(p1.pointIndex, p2.pointIndex);
+                    const endIdx = Math.max(p1.pointIndex, p2.pointIndex);
+                    const segmentPoints = track.points.slice(startIdx, endIdx + 1).map(p => [p.lat, p.lon]);
+                    
+                    highlightedSegment = L.polyline(segmentPoints, {
+                        color: '#ffd700',
+                        weight: 6,
+                        opacity: 1
+                    }).addTo(map);
+
+                    map.fitBounds(segmentPoints, { padding: [50, 50] });
+                }
+            }
         }
 
         function updateSelectionDisplay() {
@@ -582,10 +823,13 @@
 
                 const distBetween = Math.abs(p2.distance - p1.distance);
                 const elevChange = p2.elevation - p1.elevation;
-                const grade = distBetween > 0 ? (elevChange / (distBetween * 1000)) * 100 : 0;
+                
+                // If p1 is after p2 in distance, flip the elevation change
+                const actualElevChange = p2.distance >= p1.distance ? elevChange : -elevChange;
+                const grade = distBetween > 0 ? (actualElevChange / (distBetween * 1000)) * 100 : 0;
 
                 document.getElementById('distanceBetween').textContent = distBetween.toFixed(2);
-                document.getElementById('elevationChange').textContent = (elevChange >= 0 ? '+' : '') + elevChange.toFixed(0);
+                document.getElementById('elevationChange').textContent = (actualElevChange >= 0 ? '+' : '') + actualElevChange.toFixed(0);
                 document.getElementById('averageGrade').textContent = (grade >= 0 ? '+' : '') + grade.toFixed(1);
 
                 const gradeIndicator = document.getElementById('gradeIndicator');
@@ -623,10 +867,19 @@
                     const isSelected = selectedPoints.some(sp => 
                         sp.datasetIndex === di && sp.pointIndex === pi
                     );
-                    return isSelected ? 8 : 0;
+                    return isSelected ? 10 : 0;
                 });
+                
+                const pointColors = dataset.data.map((_, pi) => {
+                    const isSelected = selectedPoints.some(sp => 
+                        sp.datasetIndex === di && sp.pointIndex === pi
+                    );
+                    return isSelected ? '#ffd700' : dataset.borderColor;
+                });
+
                 dataset.pointRadius = pointRadii;
-                dataset.pointBackgroundColor = selectedPoints.some(sp => sp.datasetIndex === di) ? '#fff' : dataset.borderColor;
+                dataset.pointBackgroundColor = pointColors;
+                dataset.pointBorderColor = pointColors;
             });
 
             chart.update();
@@ -635,11 +888,30 @@
         function clearSelection() {
             selectedPoints = [];
             updateSelectionDisplay();
+            
             if (chart) {
                 chart.data.datasets.forEach(dataset => {
                     dataset.pointRadius = 0;
                 });
                 chart.update();
+            }
+
+            // Clear map selection
+            selectedMarkers.forEach(m => map.removeLayer(m));
+            selectedMarkers = [];
+            
+            if (highlightedSegment) {
+                map.removeLayer(highlightedSegment);
+                highlightedSegment = null;
+            }
+
+            // Reset map view to show all tracks
+            if (map && gpxData.length > 0) {
+                const allBounds = [];
+                gpxData.forEach(track => {
+                    track.points.forEach(p => allBounds.push([p.lat, p.lon]));
+                });
+                map.fitBounds(allBounds, { padding: [30, 30] });
             }
         }
 
