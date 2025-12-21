@@ -140,6 +140,19 @@
             height: 350px;
         }
 
+        .hr-distribution-container {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .hr-distribution-wrapper {
+            height: 250px;
+            position: relative;
+        }
+
         #map {
             height: 350px;
             border-radius: 12px;
@@ -155,7 +168,7 @@
 
         .selection-info {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             margin-top: 20px;
         }
@@ -184,6 +197,13 @@
             background-clip: text;
         }
 
+        .info-card .value.hr-value {
+            background: linear-gradient(135deg, #f56565 0%, #ed64a6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
         .info-card .unit {
             font-size: 0.85rem;
             color: #a0aec0;
@@ -207,6 +227,20 @@
         .grade-moderate { background: #ecc94b; color: #1a1a2e; }
         .grade-steep { background: #ed8936; color: #fff; }
         .grade-extreme { background: #f56565; color: #fff; }
+
+        .hr-zone {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 8px;
+        }
+
+        .hr-zone-1 { background: #a0aec0; color: #1a1a2e; }
+        .hr-zone-2 { background: #48bb78; color: #fff; }
+        .hr-zone-3 { background: #ecc94b; color: #1a1a2e; }
+        .hr-zone-4 { background: #ed8936; color: #fff; }
+        .hr-zone-5 { background: #f56565; color: #fff; }
 
         .clear-btn {
             display: block;
@@ -272,7 +306,6 @@
             opacity: 0.5;
         }
 
-        /* Custom Leaflet styles */
         .leaflet-container {
             background: #1a1a2e;
         }
@@ -284,13 +317,8 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
-        .start-marker {
-            background: #48bb78;
-        }
-
-        .end-marker {
-            background: #f56565;
-        }
+        .start-marker { background: #48bb78; }
+        .end-marker { background: #f56565; }
 
         .selected-marker {
             background: #ffd700;
@@ -304,11 +332,45 @@
             border: 2px solid #667eea;
             border-radius: 50%;
         }
+
+        .hr-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+
+        .hr-stat {
+            text-align: center;
+        }
+
+        .hr-stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #718096;
+        }
+
+        .hr-stat-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #f56565;
+        }
+
+        .no-hr-data {
+            text-align: center;
+            padding: 30px;
+            color: #718096;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🏔️ GPX Altitude Profile Analyzer</h1>
+        <h1>🏔️ GPX Altitude & Heart Rate Analyzer</h1>
 
         <div class="upload-zone" id="dropZone">
             <input type="file" id="fileInput" multiple accept=".gpx">
@@ -323,7 +385,7 @@
 
         <div class="main-content">
             <div class="chart-container">
-                <div class="section-title">📈 Elevation Profile</div>
+                <div class="section-title">📈 Elevation & Heart Rate Profile</div>
                 <div class="chart-wrapper">
                     <canvas id="altitudeChart"></canvas>
                 </div>
@@ -343,6 +405,51 @@
                         <span>Map will appear here</span>
                     </div>
                     <div id="map" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="hr-distribution-container" id="hrDistributionContainer">
+            <div class="section-title">❤️ Heart Rate Distribution (Selected Section)</div>
+            <div class="hr-distribution-wrapper">
+                <canvas id="hrDistributionChart"></canvas>
+            </div>
+            <div class="hr-stats" id="hrStats">
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Min</div>
+                    <div class="hr-stat-value" id="hrMin">-</div>
+                </div>
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Max</div>
+                    <div class="hr-stat-value" id="hrMax">-</div>
+                </div>
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Median</div>
+                    <div class="hr-stat-value" id="hrMedian">-</div>
+                </div>
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Std Dev</div>
+                    <div class="hr-stat-value" id="hrStdDev">-</div>
+                </div>
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Zone 1 (&lt;60%)</div>
+                    <div class="hr-stat-value" id="hrZone1">-</div>
+                </div>
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Zone 2 (60-70%)</div>
+                    <div class="hr-stat-value" id="hrZone2">-</div>
+                </div>
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Zone 3 (70-80%)</div>
+                    <div class="hr-stat-value" id="hrZone3">-</div>
+                </div>
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Zone 4 (80-90%)</div>
+                    <div class="hr-stat-value" id="hrZone4">-</div>
+                </div>
+                <div class="hr-stat">
+                    <div class="hr-stat-label">Zone 5 (&gt;90%)</div>
+                    <div class="hr-stat-value" id="hrZone5">-</div>
                 </div>
             </div>
         </div>
@@ -376,6 +483,12 @@
                 <div class="unit">%</div>
                 <div class="grade-indicator" id="gradeIndicator"></div>
             </div>
+            <div class="info-card" id="hrCard">
+                <h3>Avg Heart Rate</h3>
+                <div class="value hr-value" id="averageHR">-</div>
+                <div class="unit">bpm</div>
+                <div class="hr-zone" id="hrZoneIndicator"></div>
+            </div>
         </div>
 
         <button class="clear-btn" id="clearSelection" style="display: none;">Clear Selection</button>
@@ -383,11 +496,17 @@
 
     <script>
         const colors = [
-            '#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a',
+            '#667eea', '#4facfe', '#43e97b', '#fa709a',
             '#fee140', '#30cfd0', '#a8edea', '#ff9a9e', '#fbc2eb'
         ];
 
+        const hrColors = [
+            '#f56565', '#ed64a6', '#d53f8c', '#b83280',
+            '#fc8181', '#f687b3', '#ed64a6', '#d53f8c', '#b83280'
+        ];
+
         let chart = null;
+        let hrDistributionChart = null;
         let map = null;
         let gpxData = [];
         let selectedPoints = [];
@@ -405,6 +524,7 @@
         const clearBtn = document.getElementById('clearSelection');
         const mapPlaceholder = document.getElementById('mapPlaceholder');
         const mapDiv = document.getElementById('map');
+        const hrDistributionContainer = document.getElementById('hrDistributionContainer');
 
         // Drag and drop handlers
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -459,12 +579,45 @@
             const points = [];
             let totalDistance = 0;
             let prevLat = null, prevLon = null;
+            let hasHrData = false;
 
             trackPoints.forEach((pt, index) => {
                 const lat = parseFloat(pt.getAttribute('lat'));
                 const lon = parseFloat(pt.getAttribute('lon'));
                 const eleNode = pt.querySelector('ele');
                 const ele = eleNode ? parseFloat(eleNode.textContent) : 0;
+
+                // Try to find heart rate data in extensions
+                let hr = null;
+                const extensions = pt.querySelector('extensions');
+                if (extensions) {
+                    // Try various HR tag formats used by different devices
+                    const hrNode = extensions.querySelector('hr') || 
+                                   extensions.querySelector('heartrate') ||
+                                   extensions.querySelector('gpxtpx\\:hr') ||
+                                   extensions.querySelector('ns3\\:hr') ||
+                                   extensions.getElementsByTagNameNS('*', 'hr')[0];
+                    if (hrNode) {
+                        hr = parseFloat(hrNode.textContent);
+                        hasHrData = true;
+                    }
+                    
+                    // Also check TrackPointExtension format (Garmin)
+                    if (!hr) {
+                        const tpx = extensions.querySelector('gpxtpx\\:TrackPointExtension') ||
+                                    extensions.querySelector('TrackPointExtension') ||
+                                    extensions.getElementsByTagNameNS('*', 'TrackPointExtension')[0];
+                        if (tpx) {
+                            const hrInTpx = tpx.querySelector('gpxtpx\\:hr') || 
+                                            tpx.querySelector('hr') ||
+                                            tpx.getElementsByTagNameNS('*', 'hr')[0];
+                            if (hrInTpx) {
+                                hr = parseFloat(hrInTpx.textContent);
+                                hasHrData = true;
+                            }
+                        }
+                    }
+                }
 
                 if (prevLat !== null) {
                     totalDistance += haversineDistance(prevLat, prevLon, lat, lon);
@@ -474,17 +627,21 @@
                     distance: totalDistance,
                     elevation: ele,
                     lat: lat,
-                    lon: lon
+                    lon: lon,
+                    hr: hr
                 });
 
                 prevLat = lat;
                 prevLon = lon;
             });
 
+            const colorIndex = gpxData.length % colors.length;
             gpxData.push({
                 name: filename.replace('.gpx', ''),
                 points: points,
-                color: colors[gpxData.length % colors.length]
+                color: colors[colorIndex],
+                hrColor: hrColors[colorIndex],
+                hasHrData: hasHrData
             });
 
             updateFilesList();
@@ -493,7 +650,7 @@
         }
 
         function haversineDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth's radius in km
+            const R = 6371;
             const dLat = toRad(lat2 - lat1);
             const dLon = toRad(lon2 - lon1);
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -510,7 +667,7 @@
         function updateFilesList() {
             filesList.innerHTML = gpxData.map((data, index) => `
                 <div class="file-tag" style="background: linear-gradient(135deg, ${data.color} 0%, ${data.color}99 100%);">
-                    ${data.name}
+                    ${data.name} ${data.hasHrData ? '❤️' : ''}
                     <span class="remove" onclick="removeFile(${index})">✕</span>
                 </div>
             `).join('');
@@ -520,6 +677,7 @@
             gpxData.splice(index, 1);
             gpxData.forEach((data, i) => {
                 data.color = colors[i % colors.length];
+                data.hrColor = hrColors[i % hrColors.length];
             });
             updateFilesList();
             updateChart();
@@ -555,7 +713,6 @@
 
             initMap();
 
-            // Clear existing layers
             mapLayers.forEach(layer => map.removeLayer(layer));
             mapLayers = [];
 
@@ -564,7 +721,6 @@
             gpxData.forEach((track, trackIndex) => {
                 const coordinates = track.points.map(p => [p.lat, p.lon]);
                 
-                // Add track polyline
                 const polyline = L.polyline(coordinates, {
                     color: track.color,
                     weight: 4,
@@ -572,7 +728,6 @@
                 }).addTo(map);
                 mapLayers.push(polyline);
 
-                // Add start marker
                 const startIcon = L.divIcon({
                     className: 'custom-marker start-marker',
                     iconSize: [14, 14],
@@ -583,7 +738,6 @@
                     .addTo(map);
                 mapLayers.push(startMarker);
 
-                // Add end marker
                 const endIcon = L.divIcon({
                     className: 'custom-marker end-marker',
                     iconSize: [14, 14],
@@ -615,18 +769,48 @@
 
             instructions.textContent = 'Click on the chart to select two points and calculate the average grade between them.';
 
-            const datasets = gpxData.map((track, index) => ({
-                label: track.name,
-                data: track.points.map(p => ({ x: p.distance, y: p.elevation })),
-                borderColor: track.color,
-                backgroundColor: track.color + '20',
-                fill: true,
-                tension: 0.3,
-                pointRadius: 0,
-                pointHoverRadius: 6,
-                borderWidth: 2,
-                trackIndex: index
-            }));
+            const datasets = [];
+            
+            // Add elevation datasets
+            gpxData.forEach((track, index) => {
+                datasets.push({
+                    label: track.name + ' (Elevation)',
+                    data: track.points.map(p => ({ x: p.distance, y: p.elevation })),
+                    borderColor: track.color,
+                    backgroundColor: track.color + '20',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    pointHoverRadius: 6,
+                    borderWidth: 2,
+                    yAxisID: 'y',
+                    trackIndex: index,
+                    dataType: 'elevation'
+                });
+            });
+
+            // Add heart rate datasets
+            gpxData.forEach((track, index) => {
+                if (track.hasHrData) {
+                    datasets.push({
+                        label: track.name + ' (HR)',
+                        data: track.points.filter(p => p.hr !== null).map(p => ({ x: p.distance, y: p.hr })),
+                        borderColor: track.hrColor,
+                        backgroundColor: 'transparent',
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        pointHoverRadius: 4,
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        yAxisID: 'y1',
+                        trackIndex: index,
+                        dataType: 'hr'
+                    });
+                }
+            });
+
+            const hasAnyHrData = gpxData.some(t => t.hasHrData);
 
             const ctx = document.getElementById('altitudeChart').getContext('2d');
 
@@ -659,6 +843,8 @@
                             grid: { color: 'rgba(255,255,255,0.1)' }
                         },
                         y: {
+                            type: 'linear',
+                            position: 'left',
                             title: {
                                 display: true,
                                 text: 'Elevation (m)',
@@ -666,6 +852,20 @@
                             },
                             ticks: { color: '#a0aec0' },
                             grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            position: 'right',
+                            display: hasAnyHrData,
+                            title: {
+                                display: true,
+                                text: 'Heart Rate (bpm)',
+                                color: '#f56565'
+                            },
+                            ticks: { color: '#f56565' },
+                            grid: { display: false },
+                            min: 60,
+                            suggestedMax: 200
                         }
                     },
                     plugins: {
@@ -679,8 +879,17 @@
                             borderColor: '#667eea',
                             borderWidth: 1,
                             callbacks: {
-                                title: (items) => items[0]?.dataset.label || '',
-                                label: (item) => `Distance: ${item.parsed.x.toFixed(2)} km | Elevation: ${item.parsed.y.toFixed(0)} m`
+                                title: (items) => {
+                                    const item = items[0];
+                                    const label = item.dataset.label || '';
+                                    return label.replace(' (Elevation)', '').replace(' (HR)', '');
+                                },
+                                label: (item) => {
+                                    if (item.dataset.dataType === 'hr') {
+                                        return `HR: ${item.parsed.y.toFixed(0)} bpm @ ${item.parsed.x.toFixed(2)} km`;
+                                    }
+                                    return `Elevation: ${item.parsed.y.toFixed(0)} m @ ${item.parsed.x.toFixed(2)} km`;
+                                }
                             }
                         }
                     }
@@ -688,18 +897,26 @@
             });
 
             // Update legend
-            legend.innerHTML = gpxData.map(track => `
+            let legendHtml = gpxData.map(track => `
                 <div class="legend-item">
                     <div class="legend-color" style="background: ${track.color}"></div>
-                    ${track.name}
+                    ${track.name} (Elev)
                 </div>
             `).join('');
+            
+            legendHtml += gpxData.filter(t => t.hasHrData).map(track => `
+                <div class="legend-item">
+                    <div class="legend-color" style="background: ${track.hrColor}; border: 2px dashed ${track.hrColor};"></div>
+                    ${track.name} (HR)
+                </div>
+            `).join('');
+            
+            legend.innerHTML = legendHtml;
         }
 
         function handleChartHover(event, elements) {
             if (!map || gpxData.length === 0) return;
 
-            // Remove previous hover marker
             if (hoverMarker) {
                 map.removeLayer(hoverMarker);
                 hoverMarker = null;
@@ -707,9 +924,14 @@
 
             if (elements && elements.length > 0) {
                 const element = elements[0];
-                const datasetIndex = element.datasetIndex;
+                const dataset = chart.data.datasets[element.datasetIndex];
+                
+                // Only show hover for elevation datasets
+                if (dataset.dataType !== 'elevation') return;
+                
+                const trackIndex = dataset.trackIndex;
                 const pointIndex = element.index;
-                const track = gpxData[datasetIndex];
+                const track = gpxData[trackIndex];
                 const point = track.points[pointIndex];
 
                 const hoverIcon = L.divIcon({
@@ -725,12 +947,21 @@
         function handleChartClick(event, elements) {
             if (!elements || elements.length === 0) return;
 
-            const element = elements[0];
+            // Find the elevation dataset click (not HR)
+            const elevElement = elements.find(el => {
+                const ds = chart.data.datasets[el.datasetIndex];
+                return ds.dataType === 'elevation';
+            });
+            
+            if (!elevElement) return;
+
+            const element = elevElement;
             const datasetIndex = element.datasetIndex;
             const pointIndex = element.index;
             const dataset = chart.data.datasets[datasetIndex];
             const point = dataset.data[pointIndex];
-            const track = gpxData[datasetIndex];
+            const trackIndex = dataset.trackIndex;
+            const track = gpxData[trackIndex];
             const trackPoint = track.points[pointIndex];
 
             const selectedPoint = {
@@ -738,8 +969,10 @@
                 elevation: point.y,
                 lat: trackPoint.lat,
                 lon: trackPoint.lon,
-                trackName: dataset.label,
+                hr: trackPoint.hr,
+                trackName: track.name,
                 datasetIndex: datasetIndex,
+                trackIndex: trackIndex,
                 pointIndex: pointIndex
             };
 
@@ -752,12 +985,12 @@
             updateSelectionDisplay();
             updateChartAnnotations();
             updateMapSelection();
+            updateHrDistribution();
         }
 
         function updateMapSelection() {
             if (!map) return;
 
-            // Remove previous selection markers
             selectedMarkers.forEach(m => map.removeLayer(m));
             selectedMarkers = [];
 
@@ -774,19 +1007,17 @@
                 });
 
                 const marker = L.marker([point.lat, point.lon], { icon: icon })
-                    .bindPopup(`<b>Point ${index + 1}</b><br>Distance: ${point.distance.toFixed(2)} km<br>Elevation: ${point.elevation.toFixed(0)} m`)
+                    .bindPopup(`<b>Point ${index + 1}</b><br>Distance: ${point.distance.toFixed(2)} km<br>Elevation: ${point.elevation.toFixed(0)} m${point.hr ? '<br>HR: ' + point.hr + ' bpm' : ''}`)
                     .addTo(map);
                 selectedMarkers.push(marker);
             });
 
-            // Draw highlighted segment between two points
             if (selectedPoints.length === 2) {
                 const p1 = selectedPoints[0];
                 const p2 = selectedPoints[1];
                 
-                // Get all points between the two selected points
-                const track = gpxData[p1.datasetIndex];
-                if (p1.datasetIndex === p2.datasetIndex) {
+                if (p1.trackIndex === p2.trackIndex) {
+                    const track = gpxData[p1.trackIndex];
                     const startIdx = Math.min(p1.pointIndex, p2.pointIndex);
                     const endIdx = Math.max(p1.pointIndex, p2.pointIndex);
                     const segmentPoints = track.points.slice(startIdx, endIdx + 1).map(p => [p.lat, p.lon]);
@@ -802,10 +1033,183 @@
             }
         }
 
+        function getSelectedHrData() {
+            if (selectedPoints.length !== 2) return [];
+            
+            const p1 = selectedPoints[0];
+            const p2 = selectedPoints[1];
+            
+            if (p1.trackIndex !== p2.trackIndex) return [];
+            
+            const track = gpxData[p1.trackIndex];
+            const startIdx = Math.min(p1.pointIndex, p2.pointIndex);
+            const endIdx = Math.max(p1.pointIndex, p2.pointIndex);
+            
+            return track.points
+                .slice(startIdx, endIdx + 1)
+                .filter(p => p.hr !== null)
+                .map(p => p.hr);
+        }
+
+        function calculateHrStats(hrData) {
+            if (hrData.length === 0) return null;
+            
+            const sorted = [...hrData].sort((a, b) => a - b);
+            const sum = hrData.reduce((a, b) => a + b, 0);
+            const avg = sum / hrData.length;
+            const min = sorted[0];
+            const max = sorted[sorted.length - 1];
+            const median = sorted.length % 2 === 0
+                ? (sorted[sorted.length/2 - 1] + sorted[sorted.length/2]) / 2
+                : sorted[Math.floor(sorted.length/2)];
+            
+            const squaredDiffs = hrData.map(v => Math.pow(v - avg, 2));
+            const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / hrData.length;
+            const stdDev = Math.sqrt(avgSquaredDiff);
+
+            // Calculate zones (assuming max HR of 190 for simplicity - could be configurable)
+            const maxHR = 190;
+            const zones = [0, 0, 0, 0, 0];
+            hrData.forEach(hr => {
+                const pct = (hr / maxHR) * 100;
+                if (pct < 60) zones[0]++;
+                else if (pct < 70) zones[1]++;
+                else if (pct < 80) zones[2]++;
+                else if (pct < 90) zones[3]++;
+                else zones[4]++;
+            });
+            
+            const total = hrData.length;
+            const zonePcts = zones.map(z => ((z / total) * 100).toFixed(1) + '%');
+
+            return { avg, min, max, median, stdDev, zonePcts };
+        }
+
+        function updateHrDistribution() {
+            const hrData = getSelectedHrData();
+            
+            if (hrData.length === 0) {
+                hrDistributionContainer.style.display = 'none';
+                return;
+            }
+
+            hrDistributionContainer.style.display = 'block';
+            
+            const stats = calculateHrStats(hrData);
+            
+            document.getElementById('hrMin').textContent = stats.min.toFixed(0);
+            document.getElementById('hrMax').textContent = stats.max.toFixed(0);
+            document.getElementById('hrMedian').textContent = stats.median.toFixed(0);
+            document.getElementById('hrStdDev').textContent = stats.stdDev.toFixed(1);
+            document.getElementById('hrZone1').textContent = stats.zonePcts[0];
+            document.getElementById('hrZone2').textContent = stats.zonePcts[1];
+            document.getElementById('hrZone3').textContent = stats.zonePcts[2];
+            document.getElementById('hrZone4').textContent = stats.zonePcts[3];
+            document.getElementById('hrZone5').textContent = stats.zonePcts[4];
+
+            // Create histogram data
+            const binSize = 5;
+            const minBin = Math.floor(stats.min / binSize) * binSize;
+            const maxBin = Math.ceil(stats.max / binSize) * binSize;
+            const bins = {};
+            
+            for (let i = minBin; i <= maxBin; i += binSize) {
+                bins[i] = 0;
+            }
+            
+            hrData.forEach(hr => {
+                const bin = Math.floor(hr / binSize) * binSize;
+                bins[bin] = (bins[bin] || 0) + 1;
+            });
+
+            const labels = Object.keys(bins).map(b => `${b}-${parseInt(b) + binSize}`);
+            const values = Object.values(bins);
+            const total = hrData.length;
+            const percentages = values.map(v => (v / total) * 100);
+
+            // Color bars by HR zone
+            const barColors = Object.keys(bins).map(b => {
+                const hr = parseInt(b) + binSize / 2;
+                const pct = (hr / 190) * 100;
+                if (pct < 60) return '#a0aec0';
+                if (pct < 70) return '#48bb78';
+                if (pct < 80) return '#ecc94b';
+                if (pct < 90) return '#ed8936';
+                return '#f56565';
+            });
+
+            const ctx = document.getElementById('hrDistributionChart').getContext('2d');
+
+            if (hrDistributionChart) {
+                hrDistributionChart.destroy();
+            }
+
+            hrDistributionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Frequency (%)',
+                        data: percentages,
+                        backgroundColor: barColors,
+                        borderColor: barColors.map(c => c),
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(26, 26, 46, 0.95)',
+                            titleColor: '#fff',
+                            bodyColor: '#a0aec0',
+                            callbacks: {
+                                label: (item) => `${item.parsed.y.toFixed(1)}% (${values[item.dataIndex]} points)`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Heart Rate (bpm)',
+                                color: '#a0aec0'
+                            },
+                            ticks: { color: '#a0aec0' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Frequency (%)',
+                                color: '#a0aec0'
+                            },
+                            ticks: { color: '#a0aec0' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getHrZone(avgHr) {
+            const maxHR = 190;
+            const pct = (avgHr / maxHR) * 100;
+            if (pct < 60) return { zone: 1, name: 'Recovery', class: 'hr-zone-1' };
+            if (pct < 70) return { zone: 2, name: 'Endurance', class: 'hr-zone-2' };
+            if (pct < 80) return { zone: 3, name: 'Tempo', class: 'hr-zone-3' };
+            if (pct < 90) return { zone: 4, name: 'Threshold', class: 'hr-zone-4' };
+            return { zone: 5, name: 'VO2 Max', class: 'hr-zone-5' };
+        }
+
         function updateSelectionDisplay() {
             if (selectedPoints.length === 0) {
                 selectionInfo.style.display = 'none';
                 clearBtn.style.display = 'none';
+                hrDistributionContainer.style.display = 'none';
                 return;
             }
 
@@ -824,7 +1228,6 @@
                 const distBetween = Math.abs(p2.distance - p1.distance);
                 const elevChange = p2.elevation - p1.elevation;
                 
-                // If p1 is after p2 in distance, flip the elevation change
                 const actualElevChange = p2.distance >= p1.distance ? elevChange : -elevChange;
                 const grade = distBetween > 0 ? (actualElevChange / (distBetween * 1000)) * 100 : 0;
 
@@ -847,6 +1250,26 @@
                     gradeIndicator.className = 'grade-indicator grade-extreme';
                     gradeIndicator.textContent = 'Extreme';
                 }
+
+                // Calculate average HR for selection
+                const hrData = getSelectedHrData();
+                const hrCard = document.getElementById('hrCard');
+                const avgHrEl = document.getElementById('averageHR');
+                const hrZoneIndicator = document.getElementById('hrZoneIndicator');
+                
+                if (hrData.length > 0) {
+                    const avgHr = hrData.reduce((a, b) => a + b, 0) / hrData.length;
+                    avgHrEl.textContent = avgHr.toFixed(0);
+                    
+                    const zone = getHrZone(avgHr);
+                    hrZoneIndicator.className = 'hr-zone ' + zone.class;
+                    hrZoneIndicator.textContent = `Zone ${zone.zone}: ${zone.name}`;
+                    hrCard.style.display = 'block';
+                } else {
+                    avgHrEl.textContent = '-';
+                    hrZoneIndicator.className = 'hr-zone';
+                    hrZoneIndicator.textContent = 'No HR data';
+                }
             } else {
                 document.getElementById('point2Dist').textContent = '-';
                 document.getElementById('point2Alt').textContent = '-';
@@ -855,14 +1278,18 @@
                 document.getElementById('averageGrade').textContent = '-';
                 document.getElementById('gradeIndicator').className = 'grade-indicator';
                 document.getElementById('gradeIndicator').textContent = '';
+                document.getElementById('averageHR').textContent = '-';
+                document.getElementById('hrZoneIndicator').className = 'hr-zone';
+                document.getElementById('hrZoneIndicator').textContent = '';
             }
         }
 
         function updateChartAnnotations() {
             if (!chart) return;
 
-            // Update point radius to show selected points
             chart.data.datasets.forEach((dataset, di) => {
+                if (dataset.dataType !== 'elevation') return;
+                
                 const pointRadii = dataset.data.map((_, pi) => {
                     const isSelected = selectedPoints.some(sp => 
                         sp.datasetIndex === di && sp.pointIndex === pi
@@ -891,12 +1318,13 @@
             
             if (chart) {
                 chart.data.datasets.forEach(dataset => {
-                    dataset.pointRadius = 0;
+                    if (dataset.dataType === 'elevation') {
+                        dataset.pointRadius = 0;
+                    }
                 });
                 chart.update();
             }
 
-            // Clear map selection
             selectedMarkers.forEach(m => map.removeLayer(m));
             selectedMarkers = [];
             
@@ -905,7 +1333,12 @@
                 highlightedSegment = null;
             }
 
-            // Reset map view to show all tracks
+            if (hrDistributionChart) {
+                hrDistributionChart.destroy();
+                hrDistributionChart = null;
+            }
+            hrDistributionContainer.style.display = 'none';
+
             if (map && gpxData.length > 0) {
                 const allBounds = [];
                 gpxData.forEach(track => {
