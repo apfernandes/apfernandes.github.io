@@ -124,15 +124,51 @@
             position: relative;
         }
 
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
         .section-title {
             font-size: 1rem;
             text-transform: uppercase;
             letter-spacing: 1px;
             color: #a0aec0;
-            margin-bottom: 15px;
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .map-mode-selector {
+            display: flex;
+            gap: 5px;
+            background: rgba(0,0,0,0.3);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .map-mode-btn {
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            color: #a0aec0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .map-mode-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .map-mode-btn.active {
+            background: #667eea;
+            color: #fff;
         }
 
         .chart-wrapper {
@@ -157,6 +193,38 @@
             height: 350px;
             border-radius: 12px;
             z-index: 1;
+        }
+
+        .map-legend {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(26, 26, 46, 0.95);
+            padding: 12px 15px;
+            border-radius: 8px;
+            z-index: 1000;
+            font-size: 0.8rem;
+            min-width: 120px;
+        }
+
+        .map-legend-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #fff;
+        }
+
+        .map-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 4px 0;
+            color: #a0aec0;
+        }
+
+        .map-legend-color {
+            width: 20px;
+            height: 4px;
+            border-radius: 2px;
         }
 
         .instructions {
@@ -282,12 +350,6 @@
             border-radius: 3px;
         }
 
-        .no-data {
-            text-align: center;
-            padding: 60px 20px;
-            color: #718096;
-        }
-
         .map-placeholder {
             height: 350px;
             display: flex;
@@ -359,13 +421,6 @@
             font-weight: 600;
             color: #f56565;
         }
-
-        .no-hr-data {
-            text-align: center;
-            padding: 30px;
-            color: #718096;
-            font-style: italic;
-        }
     </style>
 </head>
 <body>
@@ -385,7 +440,9 @@
 
         <div class="main-content">
             <div class="chart-container">
-                <div class="section-title">📈 Elevation & Heart Rate Profile</div>
+                <div class="section-header">
+                    <div class="section-title">📈 Elevation & Heart Rate Profile</div>
+                </div>
                 <div class="chart-wrapper">
                     <canvas id="altitudeChart"></canvas>
                 </div>
@@ -396,7 +453,14 @@
             </div>
 
             <div class="map-container">
-                <div class="section-title">🗺️ Route Map</div>
+                <div class="section-header">
+                    <div class="section-title">🗺️ Route Map</div>
+                    <div class="map-mode-selector" id="mapModeSelector">
+                        <button class="map-mode-btn active" data-mode="hr">❤️ Heart Rate</button>
+                        <button class="map-mode-btn" data-mode="grade">⛰️ Grade</button>
+                        <button class="map-mode-btn" data-mode="pace">🏃 Pace</button>
+                    </div>
+                </div>
                 <div id="mapWrapper">
                     <div class="map-placeholder" id="mapPlaceholder">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -405,6 +469,10 @@
                         <span>Map will appear here</span>
                     </div>
                     <div id="map" style="display: none;"></div>
+                    <div class="map-legend" id="mapLegend" style="display: none;">
+                        <div class="map-legend-title" id="mapLegendTitle">Heart Rate</div>
+                        <div id="mapLegendItems"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -505,6 +573,35 @@
             '#fc8181', '#f687b3', '#ed64a6', '#d53f8c', '#b83280'
         ];
 
+        // Color scales for map visualization
+        const colorScales = {
+            hr: [
+                { value: 0, color: '#a0aec0', label: '< 100 bpm' },
+                { value: 100, color: '#48bb78', label: '100-120' },
+                { value: 120, color: '#ecc94b', label: '120-140' },
+                { value: 140, color: '#ed8936', label: '140-160' },
+                { value: 160, color: '#f56565', label: '160-180' },
+                { value: 180, color: '#9f1239', label: '> 180 bpm' }
+            ],
+            grade: [
+                { value: -15, color: '#3b82f6', label: '< -10%' },
+                { value: -10, color: '#60a5fa', label: '-10 to -5%' },
+                { value: -5, color: '#93c5fd', label: '-5 to 0%' },
+                { value: 0, color: '#48bb78', label: '0 to 3%' },
+                { value: 3, color: '#ecc94b', label: '3 to 6%' },
+                { value: 6, color: '#ed8936', label: '6 to 10%' },
+                { value: 10, color: '#f56565', label: '> 10%' }
+            ],
+            pace: [
+                { value: 0, color: '#9f1239', label: '< 4:00 /km' },
+                { value: 4, color: '#f56565', label: '4:00-5:00' },
+                { value: 5, color: '#ed8936', label: '5:00-6:00' },
+                { value: 6, color: '#ecc94b', label: '6:00-7:00' },
+                { value: 7, color: '#48bb78', label: '7:00-8:00' },
+                { value: 8, color: '#a0aec0', label: '> 8:00 /km' }
+            ]
+        };
+
         let chart = null;
         let hrDistributionChart = null;
         let map = null;
@@ -514,6 +611,7 @@
         let selectedMarkers = [];
         let hoverMarker = null;
         let highlightedSegment = null;
+        let currentMapMode = 'hr';
 
         const dropZone = document.getElementById('dropZone');
         const fileInput = document.getElementById('fileInput');
@@ -525,6 +623,18 @@
         const mapPlaceholder = document.getElementById('mapPlaceholder');
         const mapDiv = document.getElementById('map');
         const hrDistributionContainer = document.getElementById('hrDistributionContainer');
+        const mapModeSelector = document.getElementById('mapModeSelector');
+        const mapLegend = document.getElementById('mapLegend');
+
+        // Map mode selector
+        mapModeSelector.querySelectorAll('.map-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                mapModeSelector.querySelectorAll('.map-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentMapMode = btn.dataset.mode;
+                updateMap();
+            });
+        });
 
         // Drag and drop handlers
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -579,19 +689,28 @@
             const points = [];
             let totalDistance = 0;
             let prevLat = null, prevLon = null;
+            let prevTime = null;
             let hasHrData = false;
+            let hasTimeData = false;
 
             trackPoints.forEach((pt, index) => {
                 const lat = parseFloat(pt.getAttribute('lat'));
                 const lon = parseFloat(pt.getAttribute('lon'));
                 const eleNode = pt.querySelector('ele');
                 const ele = eleNode ? parseFloat(eleNode.textContent) : 0;
+                
+                // Parse time
+                const timeNode = pt.querySelector('time');
+                let time = null;
+                if (timeNode) {
+                    time = new Date(timeNode.textContent);
+                    hasTimeData = true;
+                }
 
                 // Try to find heart rate data in extensions
                 let hr = null;
                 const extensions = pt.querySelector('extensions');
                 if (extensions) {
-                    // Try various HR tag formats used by different devices
                     const hrNode = extensions.querySelector('hr') || 
                                    extensions.querySelector('heartrate') ||
                                    extensions.querySelector('gpxtpx\\:hr') ||
@@ -602,7 +721,6 @@
                         hasHrData = true;
                     }
                     
-                    // Also check TrackPointExtension format (Garmin)
                     if (!hr) {
                         const tpx = extensions.querySelector('gpxtpx\\:TrackPointExtension') ||
                                     extensions.querySelector('TrackPointExtension') ||
@@ -619,8 +737,26 @@
                     }
                 }
 
+                let segmentDistance = 0;
+                let segmentTime = 0;
+                let pace = null;
+                let grade = null;
+
                 if (prevLat !== null) {
-                    totalDistance += haversineDistance(prevLat, prevLon, lat, lon);
+                    segmentDistance = haversineDistance(prevLat, prevLon, lat, lon);
+                    totalDistance += segmentDistance;
+                    
+                    // Calculate grade
+                    if (segmentDistance > 0.001) { // Avoid division by very small numbers
+                        const elevChange = ele - points[points.length - 1].elevation;
+                        grade = (elevChange / (segmentDistance * 1000)) * 100;
+                    }
+                    
+                    // Calculate pace (min/km)
+                    if (prevTime && time && segmentDistance > 0.001) {
+                        segmentTime = (time - prevTime) / 1000; // seconds
+                        pace = (segmentTime / 60) / segmentDistance; // min/km
+                    }
                 }
 
                 points.push({
@@ -628,12 +764,37 @@
                     elevation: ele,
                     lat: lat,
                     lon: lon,
-                    hr: hr
+                    hr: hr,
+                    time: time,
+                    pace: pace,
+                    grade: grade
                 });
 
                 prevLat = lat;
                 prevLon = lon;
+                prevTime = time;
             });
+
+            // Smooth the grade and pace data with a simple moving average
+            const smoothWindow = 5;
+            for (let i = 0; i < points.length; i++) {
+                let gradeSum = 0, gradeCount = 0;
+                let paceSum = 0, paceCount = 0;
+                
+                for (let j = Math.max(0, i - smoothWindow); j <= Math.min(points.length - 1, i + smoothWindow); j++) {
+                    if (points[j].grade !== null) {
+                        gradeSum += points[j].grade;
+                        gradeCount++;
+                    }
+                    if (points[j].pace !== null && points[j].pace > 0 && points[j].pace < 30) {
+                        paceSum += points[j].pace;
+                        paceCount++;
+                    }
+                }
+                
+                points[i].smoothedGrade = gradeCount > 0 ? gradeSum / gradeCount : null;
+                points[i].smoothedPace = paceCount > 0 ? paceSum / paceCount : null;
+            }
 
             const colorIndex = gpxData.length % colors.length;
             gpxData.push({
@@ -641,7 +802,8 @@
                 points: points,
                 color: colors[colorIndex],
                 hrColor: hrColors[colorIndex],
-                hasHrData: hasHrData
+                hasHrData: hasHrData,
+                hasTimeData: hasTimeData
             });
 
             updateFilesList();
@@ -667,7 +829,7 @@
         function updateFilesList() {
             filesList.innerHTML = gpxData.map((data, index) => `
                 <div class="file-tag" style="background: linear-gradient(135deg, ${data.color} 0%, ${data.color}99 100%);">
-                    ${data.name} ${data.hasHrData ? '❤️' : ''}
+                    ${data.name} ${data.hasHrData ? '❤️' : ''} ${data.hasTimeData ? '⏱️' : ''}
                     <span class="remove" onclick="removeFile(${index})">✕</span>
                 </div>
             `).join('');
@@ -702,11 +864,48 @@
             }).addTo(map);
         }
 
+        function getColorForValue(value, mode) {
+            const scale = colorScales[mode];
+            
+            if (value === null || value === undefined || isNaN(value)) {
+                return '#718096'; // Gray for missing data
+            }
+
+            for (let i = scale.length - 1; i >= 0; i--) {
+                if (value >= scale[i].value) {
+                    return scale[i].color;
+                }
+            }
+            return scale[0].color;
+        }
+
+        function updateMapLegend() {
+            const scale = colorScales[currentMapMode];
+            const titles = {
+                hr: 'Heart Rate',
+                grade: 'Grade',
+                pace: 'Pace'
+            };
+
+            document.getElementById('mapLegendTitle').textContent = titles[currentMapMode];
+            
+            const itemsHtml = scale.map(item => `
+                <div class="map-legend-item">
+                    <div class="map-legend-color" style="background: ${item.color}"></div>
+                    <span>${item.label}</span>
+                </div>
+            `).join('');
+            
+            document.getElementById('mapLegendItems').innerHTML = itemsHtml;
+            mapLegend.style.display = 'block';
+        }
+
         function updateMap() {
             if (gpxData.length === 0) {
                 if (map) {
                     mapDiv.style.display = 'none';
                     mapPlaceholder.style.display = 'flex';
+                    mapLegend.style.display = 'none';
                 }
                 return;
             }
@@ -719,41 +918,86 @@
             const allBounds = [];
 
             gpxData.forEach((track, trackIndex) => {
-                const coordinates = track.points.map(p => [p.lat, p.lon]);
+                const points = track.points;
                 
-                const polyline = L.polyline(coordinates, {
-                    color: track.color,
-                    weight: 4,
-                    opacity: 0.8
-                }).addTo(map);
-                mapLayers.push(polyline);
+                // Draw colored segments based on current mode
+                for (let i = 1; i < points.length; i++) {
+                    const p1 = points[i - 1];
+                    const p2 = points[i];
+                    
+                    let value;
+                    switch (currentMapMode) {
+                        case 'hr':
+                            value = p2.hr || p1.hr;
+                            break;
+                        case 'grade':
+                            value = p2.smoothedGrade;
+                            break;
+                        case 'pace':
+                            value = p2.smoothedPace;
+                            break;
+                    }
 
+                    const color = getColorForValue(value, currentMapMode);
+                    
+                    const segment = L.polyline([[p1.lat, p1.lon], [p2.lat, p2.lon]], {
+                        color: color,
+                        weight: 5,
+                        opacity: 0.9
+                    }).addTo(map);
+                    
+                    // Add tooltip
+                    let tooltipContent = `<b>${track.name}</b><br>Distance: ${p2.distance.toFixed(2)} km<br>Elevation: ${p2.elevation.toFixed(0)} m`;
+                    if (p2.hr) tooltipContent += `<br>HR: ${p2.hr} bpm`;
+                    if (p2.smoothedGrade !== null) tooltipContent += `<br>Grade: ${p2.smoothedGrade.toFixed(1)}%`;
+                    if (p2.smoothedPace !== null) tooltipContent += `<br>Pace: ${formatPace(p2.smoothedPace)}`;
+                    
+                    segment.bindTooltip(tooltipContent);
+                    mapLayers.push(segment);
+                }
+
+                // Add start marker
                 const startIcon = L.divIcon({
                     className: 'custom-marker start-marker',
                     iconSize: [14, 14],
                     iconAnchor: [7, 7]
                 });
-                const startMarker = L.marker(coordinates[0], { icon: startIcon })
+                const startMarker = L.marker([points[0].lat, points[0].lon], { icon: startIcon })
                     .bindPopup(`<b>${track.name}</b><br>Start`)
                     .addTo(map);
                 mapLayers.push(startMarker);
 
+                // Add end marker
                 const endIcon = L.divIcon({
                     className: 'custom-marker end-marker',
                     iconSize: [14, 14],
                     iconAnchor: [7, 7]
                 });
-                const endMarker = L.marker(coordinates[coordinates.length - 1], { icon: endIcon })
-                    .bindPopup(`<b>${track.name}</b><br>End<br>${track.points[track.points.length-1].distance.toFixed(2)} km`)
+                const endMarker = L.marker([points[points.length - 1].lat, points[points.length - 1].lon], { icon: endIcon })
+                    .bindPopup(`<b>${track.name}</b><br>End<br>${points[points.length - 1].distance.toFixed(2)} km`)
                     .addTo(map);
                 mapLayers.push(endMarker);
 
-                allBounds.push(...coordinates);
+                points.forEach(p => allBounds.push([p.lat, p.lon]));
             });
 
             if (allBounds.length > 0) {
                 map.fitBounds(allBounds, { padding: [30, 30] });
             }
+
+            updateMapLegend();
+            
+            // Re-add selection markers if any
+            if (selectedPoints.length > 0) {
+                updateMapSelection();
+            }
+        }
+
+        function formatPace(pace) {
+            if (!pace || pace <= 0 || pace > 30) return '--:--';
+            const mins = Math.floor(pace);
+            const secs = Math.round((pace - mins) * 60);
+            return `${mins}:${secs.toString().padStart(2, '0')} /km`;
         }
 
         function updateChart() {
@@ -926,7 +1170,6 @@
                 const element = elements[0];
                 const dataset = chart.data.datasets[element.datasetIndex];
                 
-                // Only show hover for elevation datasets
                 if (dataset.dataType !== 'elevation') return;
                 
                 const trackIndex = dataset.trackIndex;
@@ -947,7 +1190,6 @@
         function handleChartClick(event, elements) {
             if (!elements || elements.length === 0) return;
 
-            // Find the elevation dataset click (not HR)
             const elevElement = elements.find(el => {
                 const ds = chart.data.datasets[el.datasetIndex];
                 return ds.dataType === 'elevation';
@@ -1024,7 +1266,7 @@
                     
                     highlightedSegment = L.polyline(segmentPoints, {
                         color: '#ffd700',
-                        weight: 6,
+                        weight: 8,
                         opacity: 1
                     }).addTo(map);
 
@@ -1067,7 +1309,6 @@
             const avgSquaredDiff = squaredDiffs.reduce((a, b) => a + b, 0) / hrData.length;
             const stdDev = Math.sqrt(avgSquaredDiff);
 
-            // Calculate zones (assuming max HR of 190 for simplicity - could be configurable)
             const maxHR = 190;
             const zones = [0, 0, 0, 0, 0];
             hrData.forEach(hr => {
@@ -1107,7 +1348,6 @@
             document.getElementById('hrZone4').textContent = stats.zonePcts[3];
             document.getElementById('hrZone5').textContent = stats.zonePcts[4];
 
-            // Create histogram data
             const binSize = 5;
             const minBin = Math.floor(stats.min / binSize) * binSize;
             const maxBin = Math.ceil(stats.max / binSize) * binSize;
@@ -1127,7 +1367,6 @@
             const total = hrData.length;
             const percentages = values.map(v => (v / total) * 100);
 
-            // Color bars by HR zone
             const barColors = Object.keys(bins).map(b => {
                 const hr = parseInt(b) + binSize / 2;
                 const pct = (hr / 190) * 100;
@@ -1251,7 +1490,6 @@
                     gradeIndicator.textContent = 'Extreme';
                 }
 
-                // Calculate average HR for selection
                 const hrData = getSelectedHrData();
                 const hrCard = document.getElementById('hrCard');
                 const avgHrEl = document.getElementById('averageHR');
