@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPS Globe — World Capitals</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#010108; }
+  canvas { display:block; cursor:grab; position:fixed; top:0; left:0; }
+  canvas:active { cursor:grabbing; }
+
+  #info {
+    position:fixed; bottom:0; left:0; right:0;
+    background:rgba(4,6,18,.9); border-top:1px solid #141e40;
+    padding:10px 16px 12px;
+    font-family:'Share Tech Mono',monospace; font-size:11px;
+    backdrop-filter:blur(6px);
+    pointer-events:none;
+  }
+  #city-name { font-family:'Orbitron',sans-serif; font-size:12px; color:#fff; letter-spacing:.5px; }
+  #city-coords { font-size:10px; color:#5aa0ff; margin-top:3px; }
+  #controls-hint { font-size:10px; color:#1e2840; margin-top:5px; }
+
+  #btns {
+    position:fixed; top:12px; right:14px;
+    display:flex; gap:8px;
+  }
+  button {
+    background:rgba(10,20,50,.8); border:1px solid #1e3570;
+    color:#4a7acc; font-family:'Share Tech Mono',monospace;
+    font-size:10px; letter-spacing:1px; padding:5px 13px;
+    cursor:pointer; text-transform:uppercase; transition:.15s;
+    backdrop-filter:blur(4px);
+  }
+  button:hover { background:rgba(20,40,90,.9); color:#8ab4ff; border-color:#2e55a0; }
+
+  #title {
+    position:fixed; top:15px; left:16px;
+    font-family:'Orbitron',sans-serif; font-size:11px;
+    color:#253060; letter-spacing:5px; text-transform:uppercase;
+    pointer-events:none;
+  }
+</style>
+</head>
+<body>
+<canvas id="globe"></canvas>
+<div id="title">World Capitals</div>
+<div id="btns">
+  <button id="reset-btn">Reset</button>
+  <button id="spin-btn">Pause</button>
+</div>
+<div id="info">
+  <div id="city-name">Click a capital to see great-circle routes to its 5 nearest neighbours</div>
+  <div id="city-coords"></div>
+  <div id="controls-hint">Drag to rotate &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Click capital to select</div>
+</div>
+
+<script>
+const PI = Math.PI;
+
+// [name, lat, lon] — all sovereign state capitals + major territories
+const cities = [
+  ["Kabul",34.5289,69.1725],
+  ["Tirana",41.3275,19.8189],
+  ["Algiers",36.7525,3.042],
+  ["Pago Pago",-14.2781,-170.7025],
+  ["Andorra la Vella",42.5078,1.5211],
+  ["Luanda",-8.8368,13.2343],
+  ["St. John's",17.1172,-61.8457],
+  ["Buenos Aires",-34.6051,-58.4004],
+  ["Yerevan",40.182,44.5146],
+  ["Canberra",-35.2835,149.1281],
+  ["Vienna",48.2064,16.3707],
+  ["Baku",40.3777,49.892],
+  ["Nassau",25.0582,-77.3431],
+  ["Manama",26.2154,50.5832],
+  ["Dhaka",23.7104,90.4074],
+  ["Bridgetown",13.1,-59.6167],
+  ["Minsk",53.9,27.5667],
+  ["Brussels",50.8467,4.3499],
+  ["Belmopan",17.25,-88.7667],
+  ["Cotonou",6.3654,2.4183],
+  ["Thimphu",27.4661,89.6419],
+  ["La Paz",-16.5,-68.15],
+  ["Sarajevo",43.8486,18.3564],
+  ["Gaborone",-24.6545,25.9086],
+  ["Brasília",-15.7797,-47.9297],
+  ["Bandar Seri Begawan",4.9403,114.9481],
+  ["Sofia",42.6975,23.3242],
+  ["Ouagadougou",12.3642,-1.5383],
+  ["Bujumbura",-3.3822,29.3644],
+  ["Praia",14.9215,-23.5087],
+  ["Phnom Penh",11.5625,104.916],
+  ["Yaoundé",3.8667,11.5167],
+  ["Ottawa",45.4166,-75.698],
+  ["Bangui",4.3612,18.555],
+  ["N'Djamena",12.1067,15.0444],
+  ["Santiago",-33.4569,-70.6483],
+  ["Beijing",39.9075,116.3972],
+  ["Bogotá",4.6097,-74.0818],
+  ["Moroni",-11.7022,43.2551],
+  ["Brazzaville",-4.2658,15.2832],
+  ["San José",9.9278,-84.0807],
+  ["Zagreb",45.8144,15.978],
+  ["Havana",23.1195,-82.3785],
+  ["Nicosia",35.1595,33.3669],
+  ["Prague",50.088,14.4208],
+  ["Pyongyang",39.0339,125.7543],
+  ["Kinshasa",-4.3276,15.3136],
+  ["Copenhagen",55.6759,12.5655],
+  ["Djibouti",11.5877,43.1447],
+  ["Roseau",15.3017,-61.3881],
+  ["Santo Domingo",18.4896,-69.9018],
+  ["Quito",-0.2299,-78.525],
+  ["Cairo",30.0392,31.2394],
+  ["San Salvador",13.6894,-89.1872],
+  ["Malabo",3.75,8.7833],
+  ["Asmara",15.3333,38.9333],
+  ["Tallinn",59.437,24.7535],
+  ["Addis Ababa",9.025,38.7469],
+  ["Suva",-18.1416,178.4415],
+  ["Helsinki",60.1692,24.9402],
+  ["Paris",48.8534,2.3488],
+  ["Libreville",0.3925,9.4537],
+  ["Banjul",13.4531,-16.6794],
+  ["Tbilisi",41.6941,44.8337],
+  ["Berlin",52.5244,13.4105],
+  ["Accra",5.556,-0.1969],
+  ["Athens",37.9534,23.749],
+  ["Nuuk",64.1835,-51.7216],
+  ["St. George's",12.0564,-61.7485],
+  ["Guatemala City",14.6127,-90.5307],
+  ["Conakry",9.5716,-13.6476],
+  ["Bissau",11.8636,-15.5977],
+  ["Georgetown",6.8045,-58.1553],
+  ["Port-au-Prince",18.5392,-72.335],
+  ["Vatican City",41.9024,12.4533],
+  ["Tegucigalpa",14.0818,-87.2068],
+  ["Budapest",47.498,19.0399],
+  ["Reykjavík",64.1355,-21.8954],
+  ["New Delhi",28.6667,77.2167],
+  ["Jakarta",-6.2118,106.8416],
+  ["Tehran",35.6944,51.4215],
+  ["Baghdad",33.3406,44.4009],
+  ["Dublin",53.3331,-6.2489],
+  ["Jerusalem",31.769,35.2163],
+  ["Rome",41.8947,12.4811],
+  ["Kingston",17.997,-76.7936],
+  ["Tokyo",35.6895,139.6917],
+  ["Amman",31.9552,35.945],
+  ["Astana",51.1801,71.446],
+  ["Nairobi",-1.2833,36.8167],
+  ["Tarawa",1.3272,172.9813],
+  ["Kuwait City",29.3697,47.9783],
+  ["Bishkek",42.87,74.59],
+  ["Vientiane",17.9667,102.6],
+  ["Riga",56.946,24.1059],
+  ["Beirut",33.9,35.4833],
+  ["Maseru",-29.3167,27.4833],
+  ["Monrovia",6.3005,-10.7969],
+  ["Tripoli",32.8752,13.1875],
+  ["Vaduz",47.1415,9.5215],
+  ["Vilnius",54.6892,25.2798],
+  ["Luxembourg",49.6117,6.13],
+  ["Antananarivo",-18.9137,47.5361],
+  ["Lilongwe",-13.9669,33.7873],
+  ["Kuala Lumpur",3.1412,101.6865],
+  ["Malé",4.1748,73.5089],
+  ["Bamako",12.65,-8.0],
+  ["Valletta",35.8997,14.5147],
+  ["Majuro",7.0897,171.3803],
+  ["Nouakchott",18.0858,-15.9785],
+  ["Port Louis",-20.1619,57.4989],
+  ["Mexico City",19.4273,-99.1419],
+  ["Palikir",6.9174,158.1588],
+  ["Monaco",43.7333,7.4167],
+  ["Ulaanbaatar",47.9077,106.8832],
+  ["Podgorica",42.4411,19.2636],
+  ["Rabat",34.0133,-6.8326],
+  ["Maputo",-25.9653,32.5892],
+  ["Naypyidaw",19.745,96.1297],
+  ["Windhoek",-22.5594,17.0832],
+  ["Kathmandu",27.7017,85.3206],
+  ["Amsterdam",52.374,4.8897],
+  ["Wellington",-41.2866,174.7756],
+  ["Managua",12.1328,-86.2504],
+  ["Niamey",13.5137,2.1098],
+  ["Abuja",9.0574,7.4898],
+  ["Oslo",59.9127,10.7461],
+  ["Muscat",23.6139,58.5922],
+  ["Islamabad",33.7035,73.0594],
+  ["Ngerulmud",7.5006,134.6242],
+  ["Panama City",8.9958,-79.5196],
+  ["Port Moresby",-9.4431,147.1797],
+  ["Asunción",-25.3007,-57.6359],
+  ["Lima",-12.0432,-77.0282],
+  ["Manila",14.6042,120.9822],
+  ["Warsaw",52.2298,21.0118],
+  ["Lisbon",38.7169,-9.1399],
+  ["Doha",25.2747,51.5245],
+  ["Seoul",37.5683,126.9778],
+  ["Chișinău",47.0056,28.8575],
+  ["Bucharest",44.4328,26.1043],
+  ["Moscow",55.755,37.6218],
+  ["Kigali",-1.9474,30.0579],
+  ["Basseterre",17.2948,-62.7261],
+  ["Castries",14.006,-60.991],
+  ["Kingstown",13.1587,-61.2248],
+  ["Apia",-13.8333,-171.7667],
+  ["San Marino",43.9333,12.45],
+  ["São Tomé",0.3365,6.7273],
+  ["Riyadh",24.6905,46.7096],
+  ["Dakar",14.6937,-17.4441],
+  ["Belgrade",44.8176,20.4633],
+  ["Victoria",-4.6167,55.45],
+  ["Freetown",8.484,-13.2299],
+  ["Singapore",1.2897,103.8501],
+  ["Bratislava",48.1482,17.1067],
+  ["Ljubljana",46.0511,14.5051],
+  ["Honiara",-9.4333,159.95],
+  ["Mogadishu",2.0416,45.3435],
+  ["Cape Town",-33.9258,18.4232],
+  ["Juba",4.8517,31.5825],
+  ["Madrid",40.4165,-3.7026],
+  ["Colombo",6.9319,79.8478],
+  ["Khartoum",15.5518,32.5324],
+  ["Paramaribo",5.8664,-55.1668],
+  ["Mbabane",-26.3167,31.1333],
+  ["Stockholm",59.3326,18.0649],
+  ["Bern",46.9481,7.4474],
+  ["Damascus",33.5086,36.3084],
+  ["Dushanbe",38.5358,68.7791],
+  ["Bangkok",13.722,100.5252],
+  ["Dili",-8.5601,125.5668],
+  ["Lomé",6.1375,1.2123],
+  ["Nuku'alofa",-21.1394,-175.2032],
+  ["Port of Spain",10.6662,-61.5166],
+  ["Tunis",36.819,10.1658],
+  ["Ankara",39.9199,32.8543],
+  ["Ashgabat",37.95,58.3833],
+  ["Funafuti",-8.5189,179.1991],
+  ["Kampala",0.3163,32.5822],
+  ["Kyiv",50.4454,30.5186],
+  ["Abu Dhabi",24.4648,54.3618],
+  ["London",51.5085,-0.1257],
+  ["Dodoma",-6.1722,35.7395],
+  ["Washington D.C.",38.8951,-77.0364],
+  ["Montevideo",-34.8335,-56.1674],
+  ["Tashkent",41.2647,69.2163],
+  ["Port Vila",-17.7338,168.3219],
+  ["Caracas",10.488,-66.8792],
+  ["Hanoi",21.0245,105.8412],
+  ["Sana'a",15.3531,44.2078],
+  ["Lusaka",-15.4134,28.2771],
+  ["Harare",-17.8294,31.0539],
+  ["Taipei",25.047,121.5457],
+  ["Skopje",42.0,21.4333],
+].map(([name,lat,lon])=>({name,lat,lon}));
+
+// ── Canvas & resize ───────────────────────────────────────────────────────────
+const canvas = document.getElementById('globe');
+const ctx = canvas.getContext('2d');
+const INFO_H = 62;
+let W, H, CX, CY, radius, stars = [];
+
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  canvas.width = W; canvas.height = H;
+  CX = W/2; CY = (H - INFO_H)/2;
+  radius = Math.min(W, H - INFO_H) * 0.42;
+  function rng32(s){ return()=>{ s=s+0x6D2B79F5|0; let t=Math.imul(s^s>>>15,1|s); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  const rnd = rng32(12345);
+  const count = Math.min(600, Math.floor(W*H/2500));
+  stars = Array.from({length:count}, ()=>({x:Math.floor(rnd()*W), y:Math.floor(rnd()*(H-INFO_H)), b:Math.floor(50+rnd()*185)}));
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let sl=0, sll=0, selectedCity=-1, spinning=true;
+
+// ── Projection ────────────────────────────────────────────────────────────────
+function project(lat, lon) {
+  const lr=-lat*PI/180, nr=lon*PI/180;
+  const p1=Math.cos(lr+sll);
+  const adj=p1<0?PI:0, p1a=Math.abs(p1);
+  if(Math.sin(nr+sl+PI/2+adj)*p1a<=0) return null;
+  return {x: CX+radius*Math.sin(nr+sl+adj)*p1a, y: CY+radius*Math.sin(lr+sll)};
+}
+
+// ── Great-circle distance ─────────────────────────────────────────────────────
+function gcKm(a, b) {
+  const la=cities[a].lat*PI/180, lb=cities[b].lat*PI/180;
+  const lo=cities[a].lon*PI/180, lp=cities[b].lon*PI/180;
+  const dl=lb-la, dn=lp-lo;
+  const h=Math.sin(dl/2)**2+Math.cos(la)*Math.cos(lb)*Math.sin(dn/2)**2;
+  return 6371*2*Math.atan2(Math.sqrt(h),Math.sqrt(1-h));
+}
+
+// ── Arc ───────────────────────────────────────────────────────────────────────
+function drawArc(a, b) {
+  const la=-cities[a].lat*PI/180, lo=cities[a].lon*PI/180;
+  const lb=-cities[b].lat*PI/180, lp=cities[b].lon*PI/180;
+  const ax=Math.cos(la)*Math.cos(lo),ay=Math.cos(la)*Math.sin(lo),az=Math.sin(la);
+  const bx=Math.cos(lb)*Math.cos(lp),by=Math.cos(lb)*Math.sin(lp),bz=Math.sin(lb);
+  const dot=Math.min(1,Math.max(-1,ax*bx+ay*by+az*bz));
+  if(dot>0.9999) return;
+  const d=Math.acos(dot), sinD=Math.sin(d);
+  let prev=null;
+  for(let i=0;i<=80;i++){
+    const t=i/80,A=Math.sin((1-t)*d)/sinD,B=Math.sin(t*d)/sinD;
+    const xi=A*ax+B*bx,yi=A*ay+B*by,zi=A*az+B*bz;
+    const latI=Math.atan2(zi,Math.sqrt(xi*xi+yi*yi))*180/PI;
+    const lonI=Math.atan2(yi,xi)*180/PI;
+    const pt=project(-latI,lonI);
+    if(pt&&prev){const dx=pt.x-prev.x,dy=pt.y-prev.y;if(dx*dx+dy*dy<40000){ctx.moveTo(prev.x,prev.y);ctx.lineTo(pt.x,pt.y);}}
+    prev=pt;
+  }
+}
+
+// ── Grid ──────────────────────────────────────────────────────────────────────
+function drawGrid() {
+  ctx.lineWidth=.6; ctx.strokeStyle='rgba(35,80,160,.7)';
+  for(const lat of [-60,-30,30,60]){
+    ctx.beginPath(); let prev=null;
+    for(let lon=-180;lon<=180;lon+=4){const pt=project(lat,lon);if(pt&&prev){const dx=pt.x-prev.x,dy=pt.y-prev.y;if(dx*dx+dy*dy<40000){ctx.moveTo(prev.x,prev.y);ctx.lineTo(pt.x,pt.y);}}prev=pt;}
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  for(let lon=-180;lon<180;lon+=30){let prev=null;for(let lat=-90;lat<=90;lat+=4){const pt=project(lat,lon);if(pt&&prev){const dx=pt.x-prev.x,dy=pt.y-prev.y;if(dx*dx+dy*dy<40000){ctx.moveTo(prev.x,prev.y);ctx.lineTo(pt.x,pt.y);}}prev=pt;}}
+  ctx.stroke();
+  ctx.strokeStyle='rgba(55,110,210,.9)'; ctx.lineWidth=.9;
+  ctx.beginPath(); let prev=null;
+  for(let lon=-180;lon<=180;lon+=4){const pt=project(0,lon);if(pt&&prev){const dx=pt.x-prev.x,dy=pt.y-prev.y;if(dx*dx+dy*dy<40000){ctx.moveTo(prev.x,prev.y);ctx.lineTo(pt.x,pt.y);}}prev=pt;}
+  ctx.stroke();
+}
+
+// ── Draw ──────────────────────────────────────────────────────────────────────
+function draw() {
+  ctx.fillStyle='#010108'; ctx.fillRect(0,0,W,H);
+  for(const s of stars){ctx.fillStyle=`rgb(${s.b},${s.b},${s.b})`;ctx.fillRect(s.x,s.y,1,1);}
+
+  ctx.beginPath(); ctx.arc(CX,CY,radius,0,2*PI);
+  const grd=ctx.createRadialGradient(CX-radius*.28,CY-radius*.28,0,CX,CY,radius);
+  grd.addColorStop(0,'#1d4fbd'); grd.addColorStop(1,'#0c2a70');
+  ctx.fillStyle=grd; ctx.fill();
+
+  drawGrid();
+
+  // Atmosphere
+  const atmo=ctx.createRadialGradient(CX,CY,radius*.88,CX,CY,radius*1.12);
+  atmo.addColorStop(0,'rgba(60,110,255,.1)'); atmo.addColorStop(1,'transparent');
+  ctx.beginPath(); ctx.arc(CX,CY,radius*1.12,0,2*PI); ctx.fillStyle=atmo; ctx.fill();
+  ctx.beginPath(); ctx.arc(CX,CY,radius+2,0,2*PI);
+  ctx.strokeStyle='rgba(80,130,255,.4)'; ctx.lineWidth=3; ctx.stroke();
+
+  // Arcs
+  if(selectedCity>=0){
+    const dists=cities.map((_,i)=>i===selectedCity?Infinity:gcKm(selectedCity,i));
+    for(let k=0;k<5;k++){
+      let near=-1,minD=Infinity;
+      for(let i=0;i<cities.length;i++) if(dists[i]<minD){minD=dists[i];near=i;}
+      if(near<0) break;
+      ctx.strokeStyle=`rgba(255,210,50,${1-k*0.15})`; ctx.lineWidth=1.5;
+      ctx.beginPath(); drawArc(selectedCity,near); ctx.stroke();
+      dists[near]=Infinity;
+    }
+  }
+
+  // City dots & labels — scale label size with zoom
+  const ls=Math.max(0.7,Math.min(1.4,radius/180));
+  const dotR = Math.max(1.5, radius/120);
+  for(let i=0;i<cities.length;i++){
+    const pt=project(cities[i].lat,cities[i].lon);
+    if(!pt) continue;
+    if(i===selectedCity){
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,6,0,2*PI); ctx.fillStyle='#ff3c3c'; ctx.fill();
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,8.5,0,2*PI); ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.font=`bold ${Math.round(10*ls)}px Orbitron,monospace`; ctx.fillStyle='#ffe84a';
+      ctx.fillText(cities[i].name, pt.x+11, pt.y+4);
+    } else {
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,dotR,0,2*PI); ctx.fillStyle='#ffd73c'; ctx.fill();
+      // Only show labels if zoomed in enough to avoid clutter
+      if(radius > 140){
+        ctx.font=`${Math.round(8*ls)}px Share Tech Mono,monospace`; ctx.fillStyle='rgba(190,205,235,.7)';
+        ctx.fillText(cities[i].name, pt.x+dotR+2, pt.y+3);
+      }
+    }
+  }
+}
+
+// ── Info panel ────────────────────────────────────────────────────────────────
+function updateInfo(){
+  const ne=document.getElementById('city-name'), co=document.getElementById('city-coords');
+  if(selectedCity<0){
+    ne.textContent='Click a capital to see great-circle routes to its 5 nearest neighbours';
+    co.textContent=''; return;
+  }
+  const c=cities[selectedCity];
+  const latS=`${Math.abs(c.lat).toFixed(2)}°${c.lat>=0?'N':'S'}`;
+  const lonS=`${Math.abs(c.lon).toFixed(2)}°${c.lon>=0?'E':'W'}`;
+  let minD=Infinity,nearN='';
+  for(let i=0;i<cities.length;i++){if(i===selectedCity)continue;const d=gcKm(selectedCity,i);if(d<minD){minD=d;nearN=cities[i].name;}}
+  ne.textContent=`${c.name}   ${latS}  ${lonS}`;
+  co.textContent=`Nearest capital: ${Math.round(minD).toLocaleString()} km (${nearN})  ·  Showing great-circle arcs to 5 closest capitals`;
+}
+
+// ── Loop ──────────────────────────────────────────────────────────────────────
+function loop(){ if(spinning) sl+=PI/500; draw(); requestAnimationFrame(loop); }
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+document.getElementById('reset-btn').addEventListener('click',()=>{
+  sl=0;sll=0;radius=Math.min(W,H-INFO_H)*.42;selectedCity=-1;spinning=true;
+  document.getElementById('spin-btn').textContent='Pause'; updateInfo();
+});
+document.getElementById('spin-btn').addEventListener('click',()=>{
+  spinning=!spinning;
+  document.getElementById('spin-btn').textContent=spinning?'Pause':'Resume';
+});
+
+// ── Mouse ─────────────────────────────────────────────────────────────────────
+let dragging=false,lx=0,ly=0,px=0,py=0;
+canvas.addEventListener('mousedown',e=>{dragging=true;lx=px=e.clientX;ly=py=e.clientY;});
+canvas.addEventListener('mousemove',e=>{if(!dragging)return;sl+=(e.clientX-lx)*PI/200;sll+=(e.clientY-ly)*PI/200;lx=e.clientX;ly=e.clientY;});
+canvas.addEventListener('mouseup',e=>{
+  const dx=e.clientX-px,dy=e.clientY-py;
+  if(dx*dx+dy*dy<=25){
+    let best=-1,bestD=20*20;
+    for(let i=0;i<cities.length;i++){const pt=project(cities[i].lat,cities[i].lon);if(!pt)continue;const d=(pt.x-e.clientX)**2+(pt.y-e.clientY)**2;if(d<bestD){bestD=d;best=i;}}
+    selectedCity=best; updateInfo();
+  }
+  dragging=false;
+});
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  radius-=e.deltaY*.3;
+  radius=Math.max(60,Math.min(Math.min(W,H-INFO_H)*.48,radius));
+},{passive:false});
+
+// ── Touch ─────────────────────────────────────────────────────────────────────
+let tl=null;
+canvas.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];tl={x:t.clientX,y:t.clientY,px:t.clientX,py:t.clientY};},{passive:false});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!tl)return;const t=e.touches[0];sl+=(t.clientX-tl.x)*PI/200;sll+=(t.clientY-tl.y)*PI/200;tl.x=t.clientX;tl.y=t.clientY;},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  if(tl){const dx=tl.x-tl.px,dy=tl.y-tl.py;if(dx*dx+dy*dy<=25){let best=-1,bestD=24*24;for(let i=0;i<cities.length;i++){const pt=project(cities[i].lat,cities[i].lon);if(!pt)continue;const d=(pt.x-tl.px)**2+(pt.y-tl.py)**2;if(d<bestD){bestD=d;best=i;}}selectedCity=best;updateInfo();}}tl=null;
+});
+
+loop();
+</script>
+</body>
+</html>
